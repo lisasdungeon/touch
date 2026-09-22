@@ -196,7 +196,8 @@ export class TrackRegistry {
     const key = cellKeyFor(x, y, storey);
     if (!track.cells.includes(key)) track.cells.push(key);
     if (track.cells.length > 128) track.cells.shift();
-    this.#stamp(doc, id, sig);
+    const onDoc = this.trackIdOf(doc) === id;
+    if (track.assigned || onDoc) this.#stamp(doc, id, sig, Boolean(track.assigned));
     this.grouping.recompute(now);
     this.markDirty();
     return { id, continued, matched, similarity, groupId: track.groupId ?? null };
@@ -204,9 +205,11 @@ export class TrackRegistry {
 
   #stamp(doc, id, sig, explicit = false) {
     if (!doc?.setFlag) return;
+    const existing = doc.getFlag?.(MODULE_ID, "trackId");
+    if (!explicit && existing !== id) return;
     doc._touchStamping = true;
     try {
-      if (doc.getFlag?.(MODULE_ID, "trackId") !== id) doc.setFlag(MODULE_ID, "trackId", id).catch?.(() => {});
+      if (existing !== id) doc.setFlag(MODULE_ID, "trackId", id).catch?.(() => {});
       if (sig && JSON.stringify(doc.getFlag?.(MODULE_ID, "trackSig")) !== JSON.stringify(sig)) {
         doc.setFlag(MODULE_ID, "trackSig", sig).catch?.(() => {});
       }

@@ -70,20 +70,21 @@ await checkAsync("similarity: actor/texture short-circuit, drift degrades", asyn
 console.log("== Snapshot-tied tracks ==");
 await checkAsync("first crossing starts a track tied to the snapshot", async () => {
   await orc.update({ x: 500, y: 300 }); // onto the zone
-  const id = T.trackOf(orc);
+  const id = T.lastTrackEvent.id;
   const track = T.trackGet(id);
   assert.ok(track.sig, "snapshot stored on track");
   assert.strictEqual(track.sig.name, "orc brute");
   assert.strictEqual(T.lastTrackEvent.continued, false);
   assert.strictEqual(T.lastTrackEvent.matched, false);
-  // Doc got the sig tie stamped
-  assert.deepStrictEqual(orc.getFlag("touch", "trackSig"), captureSignature(orc));
+  // Observe must not mint authority-shaped flags
+  assert.strictEqual(T.trackOf(orc), null, "no trackId stamp on observe");
+  assert.strictEqual(orc.getFlag("touch", "trackSig"), undefined, "no trackSig stamp on observe");
 });
 
 await checkAsync("same object crossing again: matches image, continues path", async () => {
-  const idBefore = T.trackOf(orc);
+  const idBefore = T.lastTrackEvent.id;
   await orc.update({ x: 900, y: 300 }); // still crossing the zone
-  assert.strictEqual(T.trackOf(orc), idBefore);
+  assert.strictEqual(T.lastTrackEvent.id, idBefore);
   assert.strictEqual(T.lastTrackEvent.continued, true);
   assert.strictEqual(T.lastTrackEvent.matched, true, "verified against the image");
   assert.ok(T.lastTrackEvent.similarity >= 0.75);
@@ -91,21 +92,22 @@ await checkAsync("same object crossing again: matches image, continues path", as
 });
 
 await checkAsync("flagless object re-identified by snapshot resumes the track", async () => {
-  const idBefore = T.trackOf(orc);
-  // Simulate the flag being stripped (copy/paste, re-import)
-  orc.flags.touch.trackId = null;
+  const idBefore = T.lastTrackEvent.id;
+  // Observe never stamped; strip any residual flags and cross again.
+  if (orc.flags.touch) orc.flags.touch.trackId = null;
   await orc.update({ x: 1300, y: 300 });
-  assert.strictEqual(T.trackOf(orc), idBefore, "re-identified via snapshot");
+  assert.strictEqual(T.lastTrackEvent.id, idBefore, "re-identified via snapshot");
   assert.strictEqual(T.lastTrackEvent.matched, true, "matched against known track");
   assert.strictEqual(T.lastTrackEvent.continued, true, "path continues, no new object");
   assert.ok(T.trackGet(idBefore).points.length >= 3);
+  assert.strictEqual(T.trackOf(orc), null, "re-id via observe still does not stamp");
 });
 
 await checkAsync("mismatched object: genuinely new object, new track", async () => {
-  const orcTrack = T.trackOf(orc);
+  const orcTrack = T.lastTrackEvent.id;
   // A different creature (different name/size/disposition) crosses
   await hero.update({ x: 700, y: 300 });
-  const heroTrack = T.trackOf(hero);
+  const heroTrack = T.lastTrackEvent.id;
   assert.notStrictEqual(heroTrack, orcTrack, "separate track");
   assert.strictEqual(T.lastTrackEvent.continued, false, "logged as a new object");
   assert.strictEqual(T.trackGet(heroTrack).sig.name, "hero");
@@ -113,7 +115,7 @@ await checkAsync("mismatched object: genuinely new object, new track", async () 
 
 await checkAsync("tolerance setting gates strict vs loose matching", async () => {
   const prev = game.settings.get("touch", "trackMatchTolerance");
-  const idBefore = T.trackOf(hero);
+  const idBefore = T.lastTrackEvent.id;
   // Strict: elevation drift alone must break the match → a new object.
   await game.settings.set("touch", "trackMatchTolerance", 0);
   await hero.update({ elevation: 1, x: 1100, y: 300 });
@@ -129,7 +131,9 @@ await checkAsync("tolerance setting gates strict vs loose matching", async () =>
 });
 
 await checkAsync("snapshot survives persistence round-trip", async () => {
-  const id = T.trackOf(orc);
+  // Re-observe orc so lastTrackEvent is the orc session track again.
+  await orc.update({ x: 1500, y: 300 });
+  const id = T.lastTrackEvent.id;
   T.memory.load(sampleScene); // bind write target + hydrate cells (registry untouched)
   T.memory._dirty = true;
   await T.memory.flush(); // registry is the source of truth → write flag

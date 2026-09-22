@@ -45,22 +45,24 @@ const corners = (trackId = null) => [...viewer.hypergrid.active]
   .filter((point) => point.dataset.track && (!trackId || point.dataset.track === trackId));
 
 console.log("== Trail waypoints ==");
+let orcTrailId = null;
 await check("each fix becomes a memory-bearing corner waypoint", async () => {
   await orc.update({ x: 500, y: 300 });
   await orc.update({ x: 900, y: 300 });
   await orc.update({ x: 1300, y: 300 });
+  orcTrailId = T.lastTrackEvent.id;
   viewer.flush();
   await grid();
-  assert.strictEqual(corners(T.trackOf(orc)).length, 3, "one corner per distinct five-foot fix");
+  assert.strictEqual(corners(orcTrailId).length, 3, "one corner per distinct five-foot fix");
 });
 
 await check("the newest fix is tagged as the trail head", async () => {
-  const heads = corners(T.trackOf(orc)).filter((point) => point.dataset.trackHead === "1");
+  const heads = corners(orcTrailId).filter((point) => point.dataset.trackHead === "1");
   assert.strictEqual(heads.length, 1, "one current memory head");
 });
 
 await check("trail corners brighten with recency", async () => {
-  const energy = corners(T.trackOf(orc)).map((point) => Number(point.style.getPropertyValue("--touch-cell-energy")));
+  const energy = corners(orcTrailId).map((point) => Number(point.style.getPropertyValue("--touch-cell-energy")));
   assert.ok(Math.max(...energy) > Math.min(...energy), "newer corner has greater energy");
 });
 
@@ -94,12 +96,13 @@ await check("floor filtering hides tracks outside the selected cube stack", asyn
 });
 
 await check("the room materializes at most 24 recent corners per track", async () => {
-  for (let x = 100; x <= 1900 && corners(T.trackOf(orc)).length < 24; x += 70) {
+  for (let x = 100; x <= 1900 && corners(orcTrailId).length < 24; x += 70) {
     await orc.update({ x, y: 300 });
+    orcTrailId = T.lastTrackEvent.id;
   }
   viewer.flush();
   await grid();
-  assert.ok(corners(T.trackOf(orc)).length <= 24, "per-track materialization cap respected");
+  assert.ok(corners(orcTrailId).length <= 24, "per-track materialization cap respected");
 });
 
 await check("Forget All removes track waypoints", async () => {

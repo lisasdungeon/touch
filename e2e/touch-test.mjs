@@ -63,7 +63,8 @@ try {
 console.log("== Emitter scan ==");
 check("collects tokens, lights, sounds, walls", () => {
   const emitters = window.touch.emitters();
-  const kinds = Object.groupBy(emitters, (e) => e.kind);
+  const kinds = {};
+  for (const e of emitters) (kinds[e.kind] ??= []).push(e);
   assert.strictEqual(kinds.token.length, 3, "3 visible tokens (hidden excluded)");
   assert.strictEqual(kinds.light.length, 1);
   assert.strictEqual(kinds.sound.length, 1);

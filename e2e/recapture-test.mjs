@@ -35,9 +35,10 @@ const orc = sampleScene.tokens.get("tok-orc");
 await orc.update({ x: 500, y: 100 });
 await T.clearMemory();
 
-// Build a track with history
+// Explicit identity (recapture is a GM identity op), then a crossing for history
+const id = await T.assignIdentity(orc, "trk.orc-recap", "Orc Brute");
 await orc.update({ x: 500, y: 300 });
-const id = T.trackOf(orc);
+assert.strictEqual(T.lastTrackEvent.id, id);
 const oldSig = T.trackGet(id).sig;
 
 console.log("== Re-capture ==");

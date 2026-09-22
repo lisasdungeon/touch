@@ -1,7 +1,7 @@
 /**
- * e2e/tracks-test.mjs — track continuity: a token crossing a zone gets a
- * persistent track flag; later crossings continue the same track across
- * zones; memory cells link to the track; payload passthrough; persistence.
+ * e2e/tracks-test.mjs — track continuity: observe keeps in-memory tracks
+ * without stamping doc flags; later crossings continue via snapshot match;
+ * memory cells link to the track; payload passthrough; persistence.
  */
 import "./foundry-mock.mjs";
 import assert from "node:assert";
@@ -33,6 +33,7 @@ const pwMod = await import("../touch/scripts/pathways.js");
 
 // A token to drag across zones.
 const orc = sampleScene.tokens.get("tok-orc");
+const hero = sampleScene.tokens.get("tok-hero");
 // Two pathways forming two zones along the orc's likely path.
 const zoneA = await pwMod.createPathway(sampleScene, {
   a: { x: 0, y: 300 }, b: { x: 2000, y: 300 }, name: "Zone A", elevation: 0,
@@ -44,54 +45,66 @@ const zoneB = await pwMod.createPathway(sampleScene, {
 await orc.update({ x: 500, y: 100 });
 
 console.log("== Track assignment ==");
-await checkAsync("first crossing stamps a new track flag", async () => {
+let orcSessionId = null;
+await checkAsync("does not stamp on observe", async () => {
   await T.clearMemory();
   assert.strictEqual(T.trackOf(orc), null, "no track before crossing");
   await orc.update({ x: 500, y: 300 }); // onto Zone A
-  const id = T.trackOf(orc);
-  assert.ok(id && id.startsWith("trk."), `track stamped (${id})`);
+  const id = T.lastTrackEvent.id;
+  assert.ok(id && id.startsWith("trk."), `in-memory track (${id})`);
+  assert.strictEqual(T.trackOf(orc), null, "observe must not stamp trackId");
+  assert.strictEqual(orc.getFlag("touch", "trackSig"), undefined, "observe must not stamp trackSig");
   const track = T.trackGet(id);
   assert.ok(track, "track registered");
   assert.strictEqual(track.label, "Orc Brute");
   assert.strictEqual(track.points.length, 1, "one fix recorded");
   assert.strictEqual(T.lastTrackEvent.continued, false, "marked as new event");
+  orcSessionId = id;
+});
+
+await checkAsync("assignIdentity does stamp", async () => {
+  await hero.update({ x: 800, y: 100 });
+  const id = await T.assignIdentity(hero, "trk.hero-assigned", "Hero");
+  assert.strictEqual(id, "trk.hero-assigned");
+  assert.strictEqual(T.trackOf(hero), id, "trackId stamped");
+  assert.ok(hero.getFlag("touch", "trackSig"), "trackSig stamped");
+  assert.strictEqual(hero.getFlag("touch", "identity"), id, "identity stamped");
 });
 
 await checkAsync("moving within/past the zone continues the same track", async () => {
   await orc.update({ x: 700, y: 310 }); // still on Zone A
-  const id2 = T.trackOf(orc);
-  const track = T.trackGet(id2);
+  assert.strictEqual(T.lastTrackEvent.id, orcSessionId);
+  const track = T.trackGet(orcSessionId);
   assert.strictEqual(track.points.length, 2, "second fix on same track");
   assert.strictEqual(T.lastTrackEvent.continued, true, "continuing event");
+  assert.strictEqual(T.trackOf(orc), null, "still unstamped on observe");
 });
 
 await checkAsync("second zone continues the track — not a new event", async () => {
-  const idBefore = T.trackOf(orc);
   await orc.update({ x: 900, y: 600 }); // onto Zone B
-  const idAfter = T.trackOf(orc);
-  assert.strictEqual(idAfter, idBefore, "same track id across zones");
-  const track = T.trackGet(idAfter);
+  assert.strictEqual(T.lastTrackEvent.id, orcSessionId, "same track id across zones");
+  const track = T.trackGet(orcSessionId);
   assert.strictEqual(track.points.length, 3);
   assert.ok(track.cells.length >= 2, "multiple cells linked");
   assert.strictEqual(T.lastTrackEvent.continued, true, "continuing, not new");
 });
 
 await checkAsync("a second token gets its own track", async () => {
-  const hero = sampleScene.tokens.get("tok-hero");
+  // Clear hero identity so observe forges a fresh session track for the pair test.
+  await T.revokeIdentity(hero);
   await hero.update({ x: 400, y: 300 });
-  const heroTrack = T.trackOf(hero);
-  const orcTrack = T.trackOf(orc);
-  assert.ok(heroTrack && heroTrack !== orcTrack, "distinct tracks per token");
+  const heroTrack = T.lastTrackEvent.id;
+  assert.ok(heroTrack && heroTrack !== orcSessionId, "distinct tracks per token");
+  assert.strictEqual(T.trackOf(hero), null, "second token observe also unstamped");
 });
 
 console.log("== Memory & payload linkage ==");
 await checkAsync("memory cells link the track id", async () => {
-  const trackId = T.trackOf(orc);
-  const track = T.trackGet(trackId);
+  const track = T.trackGet(orcSessionId);
   const cell = T.memoryAt(track.points[0].x, track.points[0].y, 0);
   assert.ok(cell, "cell remembered");
-  assert.ok(cell.tracks?.includes(trackId), `cell linked to track (${cell.tracks})`);
-  assert.strictEqual(cell.lastTrackId, trackId);
+  assert.ok(cell.tracks?.includes(orcSessionId), `cell linked to track (${cell.tracks})`);
+  assert.strictEqual(cell.lastTrackId, orcSessionId);
 });
 
 await checkAsync("trace payloads carry trackId + continued flag", async () => {
@@ -100,22 +113,21 @@ await checkAsync("trace payloads carry trackId + continued flag", async () => {
   const batch = game.socket.outbox.filter((m) => m.payload?.pings?.some((p) => p.trace));
   assert.ok(batch.length >= 1, "trace broadcast sent");
   const ping = batch.at(-1).payload.pings.find((p) => p.trace);
-  assert.strictEqual(ping.trackId, T.trackOf(orc));
+  assert.strictEqual(ping.trackId, orcSessionId);
   assert.strictEqual(ping.trackContinued, true);
 });
 
 await checkAsync("track registry persists to the scene flag and reloads", async () => {
-  const id = T.trackOf(orc);
   T.memory._dirty = true; // bypass debounce for a synchronous write
   await T.memory.flush();
   const raw = sampleScene.getFlag("touch", "memory");
-  assert.ok(raw?.tracks?.[id], "track in flag");
+  assert.ok(raw?.tracks?.[orcSessionId], "track in flag");
   // Fresh registry reloads it
   T.tracks.load(sampleScene);
-  const reloaded = T.trackGet(id);
+  const reloaded = T.trackGet(orcSessionId);
   assert.ok(reloaded, "track survives reload");
   assert.strictEqual(reloaded.points.length >= 3, true);
-  assert.strictEqual(T.trackOf(orc), id, "doc flag still points at it");
+  assert.strictEqual(T.trackOf(orc), null, "observe still left no doc stamp");
 });
 
 await checkAsync("hub shows track chips", async () => {
@@ -126,12 +138,12 @@ await checkAsync("hub shows track chips", async () => {
   await T.hub.close({ force: true });
 });
 
-await checkAsync("clearMemory wipes tracks and unmarks nothing on docs", async () => {
-  const idBefore = T.trackOf(orc);
+await checkAsync("clearMemory wipes tracks; assigned stamps survive", async () => {
+  const stamped = await T.assignIdentity(orc, "trk.orc-keep", "Orc Brute");
   await T.clearMemory();
   assert.strictEqual(T.memoryMap().length, 0);
   assert.strictEqual(T.trackList().length, 0);
-  assert.strictEqual(T.trackOf(orc), idBefore, "doc flag persists (identity flag)");
+  assert.strictEqual(T.trackOf(orc), stamped, "doc flag persists (identity flag)");
 });
 
 // Cleanup: remove zones

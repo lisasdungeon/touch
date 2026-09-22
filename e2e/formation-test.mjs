@@ -46,18 +46,29 @@ let fake = realNow();
 const tick = () => { Date.now = () => (fake += 250); };
 const untick = () => { Date.now = realNow; };
 const jump = (ms) => { fake += ms; };
+let orcTrack = null;
+let heroTrack = null;
+const cross = async (who, doc, data) => {
+  const before = T.lastTrackEvent;
+  await doc.update(data);
+  if (T.lastTrackEvent && T.lastTrackEvent !== before) {
+    if (who === "orc") orcTrack = T.lastTrackEvent.id;
+    if (who === "hero") heroTrack = T.lastTrackEvent.id;
+  }
+};
+const groupOfOrc = () => (orcTrack ? T.groupOf(orcTrack) : null);
 
 console.log("== Ledger ==");
 await checkAsync("formation opens with formed + joined events", async () => {
   await T.clearMemory();
   T.memory.load(sampleScene);
   tick();
-  await orc.update({ x: 200, y: 300 });
-  await hero.update({ x: 200, y: 500 });
-  await orc.update({ x: 400, y: 300 });
-  await hero.update({ x: 400, y: 500 });
+  await cross("orc", orc, { x: 200, y: 300 });
+  await cross("hero", hero, { x: 200, y: 500 });
+  await cross("orc", orc, { x: 400, y: 300 });
+  await cross("hero", hero, { x: 400, y: 500 });
   untick();
-  const gid = T.groupOf(orc);
+  const gid = groupOfOrc();
   assert.ok(gid, "group exists");
   const tl = T.formationTimeline(gid, 12);
   assert.ok(tl, "timeline found");
@@ -68,25 +79,25 @@ await checkAsync("formation opens with formed + joined events", async () => {
 });
 
 await checkAsync("a heading flip logs left + later joined on the SAME group id", async () => {
-  const gid = T.groupOf(orc);
+  const gid = groupOfOrc();
   // Sonar only learns of a departure from EVIDENCE: the hero marches west
   // along his zone beam (heading 180) while the orc keeps marching east.
   tick();
-  await hero.update({ x: 300, y: 500 });
-  await orc.update({ x: 600, y: 300 });
-  await hero.update({ x: 150, y: 500 });
-  await orc.update({ x: 800, y: 300 });
+  await cross("hero", hero, { x: 300, y: 500 });
+  await cross("orc", orc, { x: 600, y: 300 });
+  await cross("hero", hero, { x: 150, y: 500 });
+  await cross("orc", orc, { x: 800, y: 300 });
   untick();
   const mid = T.formationTimeline(gid, 12);
   assert.ok(mid.events.some((e) => e.label === "Hero" && e.event === "left"), "hero's departure logged");
   // Hero rejoins the formation, marching east along the beam again.
   tick();
-  await hero.update({ x: 400, y: 500 });
-  await orc.update({ x: 1000, y: 300 });
-  await hero.update({ x: 600, y: 500 });
-  await orc.update({ x: 1200, y: 300 });
+  await cross("hero", hero, { x: 400, y: 500 });
+  await cross("orc", orc, { x: 1000, y: 300 });
+  await cross("hero", hero, { x: 600, y: 500 });
+  await cross("orc", orc, { x: 1200, y: 300 });
   untick();
-  const gid2 = T.groupOf(orc);
+  const gid2 = groupOfOrc();
   assert.strictEqual(gid2, gid, "group id survived the split");
   const tl = T.formationTimeline(gid, 12);
   const heroEvents = tl.events.filter((e) => e.label === "Hero");
@@ -100,11 +111,11 @@ await checkAsync("a quiet member (no fresh crossings) leaves the formation", asy
   // Hero's last observation is pushed past the 30s freshness window while
   // the orc keeps marching: the sonar stopped seeing the hero → he leaves.
   // The group goes lone here, so read the timeline, not groupOf.
-  const gid = T.groupOf(orc);
+  const gid = groupOfOrc();
   tick();
   jump(120000);
-  await orc.update({ x: 1400, y: 300 });
-  await orc.update({ x: 1500, y: 300 });
+  await cross("orc", orc, { x: 1400, y: 300 });
+  await cross("orc", orc, { x: 1500, y: 300 });
   untick();
   const tl = T.formationTimeline(gid, 12);
   const heroLeft = (tl?.events ?? []).filter((e) => e.label === "Hero" && e.event === "left");
@@ -123,10 +134,10 @@ await checkAsync("touch.formationTimeline() returns all groups; per-group return
 await checkAsync("hub renders the timeline ledger under each group chip", async () => {
   // Re-form a real group first (the staleness test left the orc solo).
   tick();
-  await orc.update({ x: 1600, y: 300 });
-  await hero.update({ x: 1600, y: 500 });
-  await orc.update({ x: 1700, y: 300 });
-  await hero.update({ x: 1700, y: 500 });
+  await cross("orc", orc, { x: 1600, y: 300 });
+  await cross("hero", hero, { x: 1600, y: 500 });
+  await cross("orc", orc, { x: 1700, y: 300 });
+  await cross("hero", hero, { x: 1700, y: 500 });
   untick();
   await T.openHub();
   const items = T.hub.element.querySelectorAll(".touch-group-item");
@@ -139,7 +150,7 @@ await checkAsync("hub renders the timeline ledger under each group chip", async 
 });
 
 await checkAsync("manual dissolve is logged in the ledger before teardown", async () => {
-  const gid = T.groupOf(orc);
+  const gid = groupOfOrc();
   assert.ok(T.dissolveGroup(gid));
   assert.strictEqual(T.groups().length, 0, "no live formations remain");
   const tl = T.formationTimeline(gid, 12);
@@ -151,15 +162,15 @@ await checkAsync("manual dissolve is logged in the ledger before teardown", asyn
 await checkAsync("timeline ledger persists through a save/reload round-trip", async () => {
   // Re-form, flush, reload: the ledger must come back with the tracks.
   tick();
-  await orc.update({ x: 200, y: 300 });
-  await hero.update({ x: 200, y: 500 });
-  await orc.update({ x: 400, y: 300 });
-  await hero.update({ x: 400, y: 500 });
+  await cross("orc", orc, { x: 200, y: 300 });
+  await cross("hero", hero, { x: 200, y: 500 });
+  await cross("orc", orc, { x: 400, y: 300 });
+  await cross("hero", hero, { x: 400, y: 500 });
   untick();
   T.memory._dirty = true;
   await T.memory.flush();
   T.tracks.load(sampleScene);
-  const gid = T.groupOf(orc);
+  const gid = groupOfOrc();
   assert.ok(gid, "group re-loaded");
   const tl = T.formationTimeline(gid, 12);
   assert.ok(tl.events.length >= 2, "ledger entries persisted");

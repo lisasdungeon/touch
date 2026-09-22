@@ -183,16 +183,15 @@ export class HyperGrid {
   #activate(cell, source, energy = 1, memory = false) {
     const waypoint = this.waypoints.get(pointId(cell.x, cell.y, cell.z));
     if (!waypoint) return;
-    if (memory) {
-      waypoint.classList.add("touch-hyper-memory");
-      waypoint.dataset.memory = "true";
-      this.active.add(waypoint);
-    }
     const priority = number(source?.priority, 0);
     const currentPriority = number(waypoint.dataset.priority, 0);
     const currentTime = Number(waypoint.dataset.time ?? GRID_AXIS);
     if (priority < currentPriority || (priority === currentPriority && cell.t > currentTime)) return;
     waypoint.classList.add("touch-hyper-active");
+    if (memory) {
+      waypoint.classList.add("touch-hyper-memory");
+      waypoint.dataset.memory = "true";
+    }
     waypoint.dataset.time = String(cell.t);
     waypoint.dataset.priority = String(priority);
     waypoint.style.setProperty("--touch-cell-color", sourceColor(source));

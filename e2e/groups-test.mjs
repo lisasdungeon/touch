@@ -45,6 +45,13 @@ const realNow = Date.now.bind(Date);
 let fake = realNow();
 const tick = () => { Date.now = () => (fake += 250); };
 const untick = () => { Date.now = realNow; };
+const sessionId = { orc: null, hero: null, sniper: null };
+const cross = async (who, doc, data) => {
+  const before = T.lastTrackEvent;
+  await doc.update(data);
+  if (T.lastTrackEvent && T.lastTrackEvent !== before) sessionId[who] = T.lastTrackEvent.id;
+};
+const groupOfSession = (who) => (sessionId[who] ? T.groupOf(sessionId[who]) : null);
 
 console.log("== Association ==");
 await checkAsync("lockstep marchers share one group contact", async () => {
@@ -52,12 +59,12 @@ await checkAsync("lockstep marchers share one group contact", async () => {
   T.memory.load(sampleScene); // bind write target
   tick();
   for (const x of [200, 400, 600, 800]) {
-    await orc.update({ x, y: 300 });
-    await hero.update({ x, y: 500 });
+    await cross("orc", orc, { x, y: 300 });
+    await cross("hero", hero, { x, y: 500 });
   }
   untick();
-  const gOrc = T.groupOf(orc);
-  const gHero = T.groupOf(hero);
+  const gOrc = groupOfSession("orc");
+  const gHero = groupOfSession("hero");
   assert.ok(gOrc, "orc grouped");
   assert.strictEqual(gOrc, gHero, "same group id");
   const groups = T.groups();
@@ -70,12 +77,12 @@ await checkAsync("counter-marchers and non-movers stay independent", async () =>
   // Sniper marches west while the pair marches east.
   tick();
   for (const x of [1000, 1200, 1400]) {
-    await orc.update({ x, y: 300 });
-    await hero.update({ x, y: 500 });
-    await sniper.update({ x: 3400 - x, y: 700 });
+    await cross("orc", orc, { x, y: 300 });
+    await cross("hero", hero, { x, y: 500 });
+    await cross("sniper", sniper, { x: 3400 - x, y: 700 });
   }
   untick();
-  assert.notStrictEqual(T.groupOf(sniper), T.groupOf(orc), "opposite heading ≠ shared group");
+  assert.notStrictEqual(groupOfSession("sniper"), groupOfSession("orc"), "opposite heading ≠ shared group");
   const pair = T.groups().find((g) => g.members.length === 2);
   assert.ok(pair, "the east pair persists as its own group");
   assert.ok(pair.members.every((m) => m.label !== "Balcony Sniper"));
@@ -83,29 +90,29 @@ await checkAsync("counter-marchers and non-movers stay independent", async () =>
 
 await checkAsync("lastTrackEvent carries the groupId", async () => {
   tick();
-  await orc.update({ x: 1600, y: 300 });
+  await cross("orc", orc, { x: 1600, y: 300 });
   untick();
-  assert.strictEqual(T.lastTrackEvent.groupId, T.groupOf(orc));
+  assert.strictEqual(T.lastTrackEvent.groupId, groupOfSession("orc"));
 });
 
 console.log("== Stability ==");
 await checkAsync("group id stays stable as the group keeps marching", async () => {
-  const before = T.groupOf(orc);
+  const before = groupOfSession("orc");
   tick();
   for (const x of [1800, 2000]) {
-    await orc.update({ x, y: 300 });
-    await hero.update({ x, y: 500 });
+    await cross("orc", orc, { x, y: 300 });
+    await cross("hero", hero, { x, y: 500 });
   }
   untick();
-  assert.strictEqual(T.groupOf(orc), before, "no id churn");
+  assert.strictEqual(groupOfSession("orc"), before, "no id churn");
 });
 
 await checkAsync("association survives persistence round-trip", async () => {
-  const before = T.groupOf(orc);
+  const before = groupOfSession("orc");
   T.memory._dirty = true;
   await T.memory.flush();
   T.tracks.load(sampleScene);
-  assert.strictEqual(T.groupOf(orc), before);
+  assert.strictEqual(groupOfSession("orc"), before);
   assert.strictEqual(T.groups()[0].members.length, 2);
 });
 
@@ -113,13 +120,13 @@ await checkAsync("a member leaving the formation dissolves its membership", asyn
   // Hero stops marching (no updates) while orc keeps going: vectors diverge
   // only if the hero stops being re-observed. Reverse the orc instead — a
   // heading flip is incompatible with the group, so the group must shed it.
-  const before = T.groupOf(orc);
+  const before = groupOfSession("orc");
   tick();
   for (const x of [1800, 1600, 1400]) {
-    await orc.update({ x, y: 300 }); // now marching WEST
+    await cross("orc", orc, { x, y: 300 }); // now marching WEST
   }
   untick();
-  assert.notStrictEqual(T.groupOf(orc), before, "re-grouped after heading flip");
+  assert.notStrictEqual(groupOfSession("orc"), before, "re-grouped after heading flip");
 });
 
 console.log("== Lifecycle ==");
@@ -127,29 +134,30 @@ await checkAsync("dissolveGroup splits a group; members keep tracks", async () =
   // Re-form the pair first (the heading flip above left the orc solo).
   tick();
   for (const x of [1400, 1600]) {
-    await orc.update({ x, y: 300 });
-    await hero.update({ x, y: 500 });
+    await cross("orc", orc, { x, y: 300 });
+    await cross("hero", hero, { x, y: 500 });
   }
   untick();
-  const gid = T.groupOf(orc);
+  const gid = groupOfSession("orc");
   assert.ok(gid, "group re-formed before dissolving");
-  const trackId = T.trackOf(orc);
+  const trackId = sessionId.orc;
   assert.ok(T.dissolveGroup(gid));
-  assert.strictEqual(T.groupOf(orc), null);
-  assert.strictEqual(T.trackOf(orc), trackId, "track itself untouched");
+  assert.strictEqual(groupOfSession("orc"), null);
+  assert.strictEqual(sessionId.orc, trackId, "track itself untouched");
+  assert.ok(T.trackGet(trackId), "track itself untouched");
   assert.strictEqual(T.groups().length, 0);
 });
 
 await checkAsync("re-association happens automatically on later crossings", async () => {
   tick();
   for (const x of [1400, 1600]) {
-    await orc.update({ x, y: 300 });
-    await hero.update({ x, y: 500 });
+    await cross("orc", orc, { x, y: 300 });
+    await cross("hero", hero, { x, y: 500 });
   }
   untick();
-  const gid = T.groupOf(orc);
+  const gid = groupOfSession("orc");
   assert.ok(gid, "grouped again");
-  assert.strictEqual(gid, T.groupOf(hero));
+  assert.strictEqual(gid, groupOfSession("hero"));
 });
 
 console.log("== Hub & viewer ==");
