@@ -31,7 +31,10 @@ function addSceneControlGroup(controls) {
   const tools = actionTools.map(([name, title, icon, action]) => ({
     name, title, icon, button: true, toggle: false, visible: true,
     onClick: action,
-    onChange: (...args) => args.includes(false) ? undefined : action(),
+    onChange: (...args) => {
+      const active = args.length > 1 ? args.at(-1) : args[0];
+      return active ? action() : undefined;
+    },
   }));
   const group = {
     name: "touch",
@@ -49,6 +52,7 @@ function addSceneControlGroup(controls) {
 
 Hooks.once("init", () => {
   console.debug("Touch | init");
+  Hooks.on("getSceneControlButtons", addSceneControlGroup);
   registerHelpers();
   game.touch = { viewer: null, hub: null, pinger: null, cameras: null };
   const register = (key, data) => game.settings.register(MODULE_ID, key, data);
@@ -104,7 +108,6 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", () => {
-  Hooks.on("getSceneControlButtons", addSceneControlGroup);
   const refresh = setTimeout(() => ui.controls?.render?.(true), 500);
   refresh?.unref?.();
 });

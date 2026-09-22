@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 — 2026-09-21
+
+- Registered the Touch scene-control group during Foundry's `init` hook so the
+  controls exist before the scene-control toolbar renders.
+- Corrected `onChange` handling so tool deactivation never invokes an action,
+  while preserving the legacy click path.
+
+## 0.1.4 — 2026-09-21
 
 - Added a fixed 100 × 100 × 100-foot 4D wireframe room to the active Foundry
   scene and Sonar Viewer.
@@ -12,8 +19,6 @@
   into the corresponding corner waypoints; track history retains recency,
   head state, and stable track or group color.
 - Removed the obsolete configurable WebGL W/H/D room and orbit controls.
-
-## 0.1.4 — 2026-09-21
 
 - Restored the dedicated Touch scene-control group with the Dev Bible's
   required order, Token layer, ready-time registration, and control refresh.

@@ -45,6 +45,9 @@ try {
 console.log("== Lifecycle: init → ready ==");
 try {
   for (const fn of Hooks.events.init ?? []) fn();
+  check("scene-control hook is registered during init", () => {
+    assert.ok((Hooks.events.getSceneControlButtons ?? []).length > 0, "getSceneControlButtons hook missing after init");
+  });
   for (const fn of Hooks.events.ready ?? []) fn();
   check("window.touch API exists after ready", () => {
     for (const k of ["openViewer", "openHub", "setEmitterConfig", "setEmitterElevation", "setEmitterLevels", "setEmitterWallHeight", "bulkSetIntensity", "bulkSetMuted", "emitters"]) {
