@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-09-21
 
 - Added a clean E2E runner for isolated Foundry mock processes.
 - Added Foundry v12 legacy-array and v13+ record scene-control compatibility.
