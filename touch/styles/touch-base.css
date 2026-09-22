@@ -19,9 +19,10 @@
 
 .touch-viewer-root {
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 190px minmax(0, 1fr) auto;
   gap: 8px;
   height: 100%;
+  min-height: 0;
 }
 
 .touch-viewer-header,
@@ -54,6 +55,16 @@
 
 .touch-status { color: var(--touch-accent); }
 .touch-viewer-root[data-paused="true"] .touch-status { color: #f87171; }
+
+.touch-build {
+  position: absolute;
+  bottom: 6px;
+  left: 10px;
+  z-index: 2;
+  color: #86a2ff;
+  font-size: 10px;
+  white-space: nowrap;
+}
 
 /* Heartbeat monitor in the viewer status line: races as the next ping nears */
 .touch-heart {

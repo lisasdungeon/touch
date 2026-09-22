@@ -1,5 +1,5 @@
 {{! Touch — Sonar Viewer }}
-<div class="touch-viewer-root" data-scene="{{scene.id}}">
+<div class="touch-viewer-root" data-scene="{{scene.id}}" data-live-layers="{{liveLayers}}">
   <header class="touch-viewer-header">
     <span class="touch-status" data-status></span>
     <span class="touch-objects" data-objects>{{objects}}</span>
@@ -19,7 +19,7 @@
   </header>
 
   <div class="touch-room" data-room>
-    {{! One 5-foot wireframe CSS cube per spatial grid cell; corners hold memory. }}
+    {{! Static SVG lattice represents every five-foot spatial cube; corners hold memory. }}
     <div class="touch-hypergrid" data-hypergrid aria-label="{{localize "TOUCH.HyperGrid.Aria"}}"></div>
     <output class="touch-room-dimensions" data-hypergrid-dimensions>{{localize "TOUCH.HyperGrid.Dimensions"}}</output>
     <div class="touch-room-axes" aria-hidden="true">
@@ -28,6 +28,7 @@
       <span class="axis axis-z">{{localize "TOUCH.HyperGrid.AxisZ"}}</span>
       <span class="axis axis-t">{{localize "TOUCH.HyperGrid.AxisT"}}</span>
     </div>
+    <span class="touch-build" data-build>v{{version}} · scene {{liveLayers}}/5</span>
     {{#unless levelsOn}}
       <span class="touch-room-note" title="{{localize "TOUCH.Viewer.LevelsHint"}}">{{storeyHeight}}u / floor</span>
     {{/unless}}

@@ -7,11 +7,11 @@ import { ZoneGridLayer } from "./zoneGridLayer.js";
 
 const owned = new Map();
 const definitions = [
-  ["touchHypergrid", HypergridLayer],
-  ["touchZones", ZoneGridLayer],
-  ["touchPathways", PathwayLayer],
-  ["touchWaypoints", WaypointLayer],
-  ["touchRings", RingLayer],
+  ["touchHypergrid", HypergridLayer, 900],
+  ["touchZones", ZoneGridLayer, 910],
+  ["touchPathways", PathwayLayer, 920],
+  ["touchWaypoints", WaypointLayer, 930],
+  ["touchRings", RingLayer, 940],
 ];
 
 function expose(property, layer) {
@@ -27,18 +27,21 @@ function expose(property, layer) {
 export async function ensureTouchCanvasLayers() {
   const parent = canvas?.interface ?? canvas?.stage;
   if (!parent?.addChild) throw new Error("Foundry canvas interface is unavailable");
-  for (const [property, LayerClass] of definitions) {
+  for (const [property, LayerClass, zIndex] of definitions) {
     let layer = owned.get(property);
     if (!layer || layer.destroyed) {
       layer = new LayerClass();
       owned.set(property, layer);
       expose(property, layer);
       parent.addChild(layer);
-      layer.zIndex = layer.options?.zIndex ?? LayerClass.layerOptions?.zIndex ?? 60;
       await layer.draw();
     } else if (layer.parent !== parent) {
       parent.addChild(layer);
     }
+    layer.zIndex = zIndex;
+    layer.visible = true;
+    layer.renderable = true;
+    layer.alpha = 1;
   }
   parent.sortChildren?.();
   return Object.fromEntries(owned);

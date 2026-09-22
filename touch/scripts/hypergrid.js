@@ -1,4 +1,4 @@
-/** Fixed 4D CSS room: stacked five-foot wireframe cubes and memory waypoints. */
+/** Fixed 4D room: deterministic SVG lattice with memory-bearing corners. */
 import { getPathways } from "./pathways.js";
 
 export const CELL_FEET = 5;
@@ -10,6 +10,9 @@ export const PHYSICAL_CUBE_COUNT = GRID_AXIS ** 3;
 export const PHYSICAL_WAYPOINT_COUNT = WAYPOINT_AXIS ** 3;
 export const HYPERCELL_COUNT = GRID_AXIS ** 4;
 export const HYPERWAYPOINT_COUNT = PHYSICAL_WAYPOINT_COUNT * GRID_AXIS;
+export const LATTICE_SEGMENT_COUNT = 3 * WAYPOINT_AXIS ** 2;
+
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -27,6 +30,7 @@ function pointId(x, y, z) {
 function sourceColor(source) {
   if (source?.mode === "sound") return "#a78bfa";
   if (source?.mode === "light") return "#fbbf24";
+  if (typeof source?.color === "number") return `#${source.color.toString(16).padStart(6, "0")}`;
   return typeof source?.color === "string" ? source.color : "#5eead4";
 }
 
@@ -55,37 +59,37 @@ export function sceneWaypoint(x, y, elevation, born, {
 
 export const sceneCell = sceneWaypoint;
 
-function latticePosition(x, y, z) {
-  const step = 10;
-  return { x: `${x * step}px`, y: `${(GRID_AXIS - y) * step}px`, z: `${(z - GRID_AXIS / 2) * step}px` };
+function svgNode(tag, attributes = {}) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+  return node;
 }
 
-function place(element, x, y, z) {
-  const point = latticePosition(x, y, z);
-  element.style.setProperty("--tx", point.x);
-  element.style.setProperty("--ty", point.y);
-  element.style.setProperty("--tz", point.z);
-  return element;
+function project(x, y, z) {
+  return {
+    x: 320 + (x - GRID_AXIS / 2) * 13 + (z - GRID_AXIS / 2) * 6.5,
+    y: 168 - y * 5.8 + (z - GRID_AXIS / 2) * 3,
+  };
 }
 
-function makeCube(x, y, z) {
-  const cube = document.createElement("i");
-  cube.className = "touch-hyper-cube";
-  cube.dataset.x = String(x);
-  cube.dataset.y = String(y);
-  cube.dataset.z = String(z);
-  cube.setAttribute("aria-hidden", "true");
-  return place(cube, x, y, z);
+function segment(x1, y1, z1, x2, y2, z2) {
+  const start = project(x1, y1, z1);
+  const end = project(x2, y2, z2);
+  return `M${start.x},${start.y}L${end.x},${end.y}`;
 }
 
-function makeWaypoint(x, y, z) {
-  const waypoint = document.createElement("i");
-  waypoint.className = "touch-hyper-waypoint";
-  waypoint.dataset.x = String(x);
-  waypoint.dataset.y = String(y);
-  waypoint.dataset.z = String(z);
-  waypoint.setAttribute("aria-hidden", "true");
-  return place(waypoint, x, y, z);
+function latticePath() {
+  const lines = [];
+  for (let y = 0; y <= GRID_AXIS; y++) {
+    for (let z = 0; z <= GRID_AXIS; z++) lines.push(segment(0, y, z, GRID_AXIS, y, z));
+  }
+  for (let x = 0; x <= GRID_AXIS; x++) {
+    for (let z = 0; z <= GRID_AXIS; z++) lines.push(segment(x, 0, z, x, GRID_AXIS, z));
+  }
+  for (let x = 0; x <= GRID_AXIS; x++) {
+    for (let y = 0; y <= GRID_AXIS; y++) lines.push(segment(x, y, 0, x, y, GRID_AXIS));
+  }
+  return lines.join("");
 }
 
 function framesForRoom(frames) {
@@ -109,85 +113,62 @@ function waypointForMemory(memory, options) {
 export class HyperGrid {
   constructor(host) {
     this.host = host;
-    this.cubes = new Map();
-    this.waypoints = new Map();
     this.active = new Set();
-    this.lastPayload = null;
+    this.waypoints = new Map();
     this.destroyed = false;
-    this.nextCube = 0;
-    this.nextWaypoint = 0;
-    this.root = document.createElement("div");
-    this.root.className = "touch-hypergrid-space";
-    host.replaceChildren(this.root);
-    host.dataset.hypergridState = "loading";
-    this.ready = new Promise((resolve) => { this.resolveReady = resolve; });
-    this.#buildChunk();
-  }
-
-  #schedule(callback) {
-    if (globalThis.requestAnimationFrame) return globalThis.requestAnimationFrame(callback);
-    return setTimeout(callback, 0);
-  }
-
-  #buildChunk() {
-    if (this.destroyed) return;
-    const fragment = document.createDocumentFragment();
-    if (this.nextCube < PHYSICAL_CUBE_COUNT) {
-      const end = Math.min(PHYSICAL_CUBE_COUNT, this.nextCube + 160);
-      for (; this.nextCube < end; this.nextCube++) {
-        const x = this.nextCube % GRID_AXIS;
-        const z = Math.floor(this.nextCube / GRID_AXIS) % GRID_AXIS;
-        const y = Math.floor(this.nextCube / (GRID_AXIS * GRID_AXIS));
-        const cube = makeCube(x, y, z);
-        this.cubes.set(pointId(x, y, z), cube);
-        fragment.appendChild(cube);
-      }
-    } else {
-      const end = Math.min(PHYSICAL_WAYPOINT_COUNT, this.nextWaypoint + 240);
-      for (; this.nextWaypoint < end; this.nextWaypoint++) {
-        const x = this.nextWaypoint % WAYPOINT_AXIS;
-        const z = Math.floor(this.nextWaypoint / WAYPOINT_AXIS) % WAYPOINT_AXIS;
-        const y = Math.floor(this.nextWaypoint / (WAYPOINT_AXIS * WAYPOINT_AXIS));
-        const waypoint = makeWaypoint(x, y, z);
-        this.waypoints.set(pointId(x, y, z), waypoint);
-        fragment.appendChild(waypoint);
-      }
-    }
-    this.root.appendChild(fragment);
-    if (this.nextCube < PHYSICAL_CUBE_COUNT || this.nextWaypoint < PHYSICAL_WAYPOINT_COUNT) {
-      this.buildTimer = this.#schedule(() => this.#buildChunk());
-      return;
-    }
-    this.host.dataset.hypergridState = "ready";
-    this.resolveReady?.(this);
-    if (this.lastPayload) this.update(this.lastPayload);
+    this.physicalCubeCount = PHYSICAL_CUBE_COUNT;
+    this.physicalWaypointCount = PHYSICAL_WAYPOINT_COUNT;
+    this.segmentCount = LATTICE_SEGMENT_COUNT;
+    this.svg = svgNode("svg", {
+      class: "touch-hypergrid-svg",
+      viewBox: "0 0 640 220",
+      preserveAspectRatio: "xMidYMid meet",
+      "aria-hidden": "true",
+    });
+    this.lattice = svgNode("path", { class: "touch-hyper-lattice", d: latticePath() });
+    this.markers = svgNode("g", { class: "touch-hyper-markers" });
+    this.svg.append(this.lattice, this.markers);
+    host.replaceChildren(this.svg);
+    host.dataset.hypergridRenderer = "svg";
+    host.dataset.hypergridState = "ready";
+    host.dataset.cubes = String(PHYSICAL_CUBE_COUNT);
+    host.dataset.waypoints = String(PHYSICAL_WAYPOINT_COUNT);
+    this.ready = Promise.resolve(this);
   }
 
   #clear() {
-    for (const waypoint of this.active) {
-      waypoint.classList.remove("touch-hyper-active", "touch-hyper-memory");
-      delete waypoint.dataset.time;
-      delete waypoint.dataset.memory;
-      delete waypoint.dataset.track;
-      delete waypoint.dataset.group;
-      delete waypoint.dataset.trackHead;
-      delete waypoint.dataset.priority;
-      waypoint.removeAttribute("title");
-      waypoint.style.removeProperty("--touch-cell-color");
-      waypoint.style.removeProperty("--touch-cell-energy");
-      waypoint.style.removeProperty("--touch-time-opacity");
-    }
+    this.markers.replaceChildren();
     this.active.clear();
+    this.waypoints.clear();
+  }
+
+  #marker(cell) {
+    const id = pointId(cell.x, cell.y, cell.z);
+    let waypoint = this.waypoints.get(id);
+    if (waypoint) return waypoint;
+    const point = project(cell.x, cell.y, cell.z);
+    waypoint = svgNode("circle", {
+      class: "touch-hyper-waypoint touch-hyper-active",
+      cx: point.x,
+      cy: point.y,
+      r: 2,
+      "data-x": cell.x,
+      "data-y": cell.y,
+      "data-z": cell.z,
+    });
+    this.waypoints.set(id, waypoint);
+    this.markers.appendChild(waypoint);
+    return waypoint;
   }
 
   #activate(cell, source, energy = 1, memory = false) {
-    const waypoint = this.waypoints.get(pointId(cell.x, cell.y, cell.z));
-    if (!waypoint) return;
+    const id = pointId(cell.x, cell.y, cell.z);
+    const existing = this.waypoints.get(id);
     const priority = number(source?.priority, 0);
-    const currentPriority = number(waypoint.dataset.priority, 0);
-    const currentTime = Number(waypoint.dataset.time ?? GRID_AXIS);
-    if (priority < currentPriority || (priority === currentPriority && cell.t > currentTime)) return;
-    waypoint.classList.add("touch-hyper-active");
+    const currentPriority = number(existing?.dataset.priority, 0);
+    const currentTime = Number(existing?.dataset.time ?? GRID_AXIS);
+    if (existing && (priority < currentPriority || (priority === currentPriority && cell.t > currentTime))) return;
+    const waypoint = existing ?? this.#marker(cell);
     if (memory) {
       waypoint.classList.add("touch-hyper-memory");
       waypoint.dataset.memory = "true";
@@ -197,12 +178,15 @@ export class HyperGrid {
     waypoint.style.setProperty("--touch-cell-color", sourceColor(source));
     waypoint.style.setProperty("--touch-cell-energy", String(clamp(energy, 0.16, 1)));
     waypoint.style.setProperty("--touch-time-opacity", String(1 - cell.t / GRID_AXIS * 0.78));
+    waypoint.setAttribute("r", String(1.5 + clamp(energy, 0.16, 1) * 2.2));
     if (source?.trail) {
       waypoint.dataset.track = source.trackId;
       if (source.groupId) waypoint.dataset.group = source.groupId;
       else delete waypoint.dataset.group;
       waypoint.dataset.trackHead = source.head ? "1" : "0";
-      waypoint.title = source.groupId ? `${source.label ?? source.trackId}\n${source.groupId}` : (source.label ?? source.trackId);
+      waypoint.title = source.groupId
+        ? `${source.label ?? source.trackId}\n${source.groupId}`
+        : (source.label ?? source.trackId);
     }
     this.active.add(waypoint);
   }
@@ -227,9 +211,8 @@ export class HyperGrid {
       if (!this.#inFloor(elevation, options.floorFilter, options.storeyHeight)) continue;
       for (let index = 0; index <= 40; index++) {
         const ratio = index / 40;
-        this.#activate(sceneWaypoint(x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio, elevation, options.now, options), {
-          color: pathway.lattice ? "#5eead4" : "#9cbaff",
-        }, pathway.lattice ? 0.56 : 0.4);
+        const cell = sceneWaypoint(x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio, elevation, options.now, options);
+        this.#activate(cell, { color: pathway.lattice ? "#5eead4" : "#9cbaff" }, pathway.lattice ? 0.56 : 0.4);
       }
     }
   }
@@ -246,7 +229,6 @@ export class HyperGrid {
   }
 
   update(payload = {}) {
-    this.lastPayload = payload;
     this.#clear();
     const options = {
       floorFilter: payload.floorFilter ?? null,
@@ -266,18 +248,13 @@ export class HyperGrid {
       for (let index = 0; index < points.length; index++) {
         const point = points[index];
         const elevation = number(point.storey) * options.storeyHeight;
-        if (this.#inFloor(elevation, options.floorFilter, options.storeyHeight)) {
-          const recency = index / Math.max(1, points.length - 1);
-          this.#activate(sceneWaypoint(point.x, point.y, elevation, point.t, options), {
-            color: trackColor(track.groupId ?? track.id),
-            priority: 2,
-            trail: true,
-            trackId: track.id,
-            groupId: track.groupId,
-            label: track.label,
-            head: index === points.length - 1,
-          }, 0.16 + 0.72 * recency);
-        }
+        if (!this.#inFloor(elevation, options.floorFilter, options.storeyHeight)) continue;
+        const recency = index / Math.max(1, points.length - 1);
+        this.#activate(sceneWaypoint(point.x, point.y, elevation, point.t, options), {
+          color: trackColor(track.groupId ?? track.id), priority: 2, trail: true,
+          trackId: track.id, groupId: track.groupId, label: track.label,
+          head: index === points.length - 1,
+        }, 0.16 + 0.72 * recency);
       }
     }
     for (const wave of [...(payload.wavefield?.waves ?? []), ...(payload.wavefield?.echos ?? [])]) {
@@ -285,9 +262,8 @@ export class HyperGrid {
       const radius = Math.max(0, (options.now - number(wave.born, options.now)) / 1000 * number(payload.waveSpeed, 400));
       for (let index = 0; index < 48; index++) {
         const angle = index / 48 * Math.PI * 2;
-        this.#activate(sceneWaypoint(wave.x + Math.cos(angle) * radius, wave.y + Math.sin(angle) * radius, wave.elevation, wave.born, options), {
-          color: wave.echo ? "#fbbf24" : "#5eead4",
-        }, 0.5);
+        const cell = sceneWaypoint(wave.x + Math.cos(angle) * radius, wave.y + Math.sin(angle) * radius, wave.elevation, wave.born, options);
+        this.#activate(cell, { color: wave.echo ? "#fbbf24" : "#5eead4" }, 0.5);
       }
     }
     this.#activatePathways(payload.scene, options);
@@ -297,12 +273,7 @@ export class HyperGrid {
 
   destroy() {
     this.destroyed = true;
-    if (this.buildTimer) {
-      globalThis.cancelAnimationFrame?.(this.buildTimer);
-      clearTimeout(this.buildTimer);
-    }
     this.active.clear();
-    this.cubes.clear();
     this.waypoints.clear();
     this.host.replaceChildren();
   }

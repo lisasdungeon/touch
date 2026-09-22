@@ -42,6 +42,8 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
     const context = await super._prepareContext(options);
     const count = window.touch?.emitters?.().length ?? 0;
     const storeyHeight = game.settings.get("touch", "storeyHeight") ?? 10;
+    const layerNames = ["touchHypergrid", "touchZones", "touchPathways", "touchWaypoints", "touchRings"];
+    const liveLayers = layerNames.filter((name) => canvas?.[name]?.parent).length;
     return {
       ...context,
       scene: { id: canvas.scene?.id ?? "", name: canvas.scene?.name ?? "" },
@@ -54,6 +56,8 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
       bands: this.#bands(),
       levelsOn: levelsActive(),
       objects: game.i18n.format("TOUCH.Viewer.Objects", { count }),
+      version: game.modules.get("touch")?.version ?? "dev",
+      liveLayers,
     };
   }
 

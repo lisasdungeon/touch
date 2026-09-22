@@ -26,6 +26,9 @@ await check("canvasReady creates and draws every Touch surface", async () => {
     assert.ok(canvas[property], `${property} missing`);
     assert.strictEqual(canvas[property].parent, canvas.interface, `${property} not attached to interface`);
     assert.ok(canvas[property].children.length > 0, `${property} was not drawn`);
+    assert.strictEqual(canvas[property].visible, true, `${property} is hidden`);
+    assert.strictEqual(canvas[property].renderable, true, `${property} is not renderable`);
+    assert.ok(canvas[property].zIndex >= 900, `${property} is behind core canvas surfaces`);
   }
   assert.strictEqual(canvas.touchRings.active, true, "scene rings are active without opening the Viewer");
   assert.strictEqual(canvas.stage.listenerCount("pointerdown"), 1, "placement listener attached once");

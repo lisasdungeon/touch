@@ -138,25 +138,25 @@
 
 .touch-cameras {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  min-height: 0;
 }
 
 .touch-cam {
   position: relative;
-  aspect-ratio: 16 / 9;
+  min-height: 0;
   border: 1px solid var(--touch-accent-dim);
   border-radius: 6px;
   background: #08131a;
   overflow: hidden;
 }
 
-.touch-cam[data-side="top"]    { grid-column: 2; grid-row: 1; }
-.touch-cam[data-side="left"]   { grid-column: 1; grid-row: 2; }
-.touch-cam[data-side="front"]  { grid-column: 2; grid-row: 2; }
-.touch-cam[data-side="right"]  { grid-column: 3; grid-row: 2; }
-.touch-cam[data-side="back"]   { grid-column: 2; grid-row: 3; }
-.touch-cam[data-side="bottom"] { grid-column: 3; grid-row: 1; }
+.touch-cam[data-side] {
+  grid-column: auto;
+  grid-row: auto;
+}
 
 .touch-cam .touch-cam-blips {
   position: absolute;
@@ -185,7 +185,8 @@
 /* ------------------------------------ fixed 4D wireframe cube room */
 
 .touch-room {
-  min-height: 340px;
+  height: 190px;
+  min-height: 0;
   background: radial-gradient(circle at 50% 45%, #0c2632 0%, #040a10 72%);
 }
 

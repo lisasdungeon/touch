@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.8 — 2026-09-22
+
+- Replaced the blank 17,261-element CSS cube/corner build with one deterministic
+  SVG wireframe containing every edge of the 8,000-cube spatial lattice.
+- Kept all 9,261 corners addressable while creating visible marker elements only
+  when pings, memory, tracks, pathways, or vertical bands activate them.
+- Reduced the Viewer room from 340 pixels to 190 pixels and arranged all six
+  camera feeds in two bounded rows so the full interface stays inside the window.
+- Added an on-screen version and live scene-layer count to prove which installed
+  build is running and whether all five Foundry scene surfaces are attached.
+- Forced the five scene surfaces visible and renderable above core canvas content
+  with stable z-index ordering.
+
 ## 0.1.7 — 2026-09-22
 
 - Replaced unreliable custom canvas-layer registration with lazy, direct
