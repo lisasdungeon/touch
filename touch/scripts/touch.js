@@ -70,25 +70,27 @@ Hooks.once("init", () => {
   register("globalMuted", { scope: "world", config: false, type: Boolean, default: false });
 
   Hooks.on("getSceneControlButtons", (controls) => {
-    const asArray = Array.isArray(controls);
-    const tools = [
+    const actionTools = [
       ["touch-viewer", "TOUCH.Controls.Viewer", "fa-solid fa-display", () => window.touch?.openViewer()],
-      ["touch-hub", "TOUCH.Controls.Hub", "fa-solid fa-sliders", () => window.touch?.openHub(), game.user.isGM],
       ["touch-waypoint", "TOUCH.Controls.Waypoint", "fa-solid fa-location-dot", () => window.touch?.armWaypointDeploy()],
       ["touch-pathway", "TOUCH.Controls.Pathway", "fa-solid fa-route", () => window.touch?.armPathwayDraw()],
-    ].map(([name, title, icon, action, visible = true]) => ({
-      name, title, icon, button: true, visible, onClick: action, onChange: action,
+    ];
+    if (game.user.isGM) actionTools.splice(1, 0, ["touch-hub", "TOUCH.Controls.Hub", "fa-solid fa-sliders", () => window.touch?.openHub()]);
+    const tools = actionTools.map(([name, title, icon, action]) => ({
+      name, title, icon, button: true, toggle: false, visible: true,
+      onClick: action,
+      onChange: (...args) => args.includes(false) ? undefined : action(),
     }));
-    const group = {
-      name: "touch",
-      title: "TOUCH.Controls.Touch",
-      layer: "touchRings",
-      icon: "fa-solid fa-tower-broadcast",
-      visible: true,
-      tools: asArray ? tools : Object.fromEntries(tools.map((tool, index) => [tool.name, { ...tool, order: index }])),
-    };
-    if (asArray) controls.push(group);
-    else controls.touch = group;
+    const tokenControls = Array.isArray(controls)
+      ? controls.find((control) => control?.name === "token" || control?.name === "tokens")
+      : controls?.tokens ?? controls?.token;
+    if (!tokenControls?.tools) return;
+    if (Array.isArray(tokenControls.tools)) {
+      for (const tool of tools) if (!tokenControls.tools.some((entry) => entry.name === tool.name)) tokenControls.tools.push(tool);
+      return;
+    }
+    const order = Object.keys(tokenControls.tools).length;
+    for (const [index, tool] of tools.entries()) tokenControls.tools[tool.name] ??= { ...tool, order: order + index };
   });
 
   game.socket.on(SOCKET_NAME, (payload) => {

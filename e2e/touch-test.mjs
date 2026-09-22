@@ -220,36 +220,68 @@ check("calibrate clears frames and filter", () => {
 
 // ---------------------------------------------------------- scene controls
 console.log("== Scene controls ==");
-check("Touch scene control group with GM hub button (v13+ Record API)", () => {
-  // Real Foundry v13+/v14 passes a Record keyed by control name.
-  const controls = {};
+check("Touch action tools attach to Token controls (v13+/v14 Record API)", () => {
+  const controls = { tokens: { name: "tokens", tools: { select: { name: "select" } } } };
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  const group = controls.touch;
-  assert.ok(group, "top-level Touch control group registered");
-  const tools = Object.values(group.tools);
+  const tools = Object.values(controls.tokens.tools);
   assert.ok(tools.some((t) => t.name === "touch-hub"), "hub button present");
   assert.ok(tools.some((t) => t.name === "touch-viewer"), "viewer button present");
   assert.ok(tools.some((t) => t.name === "touch-waypoint"), "waypoint button present");
   assert.ok(tools.some((t) => t.name === "touch-pathway"), "pathway button present");
-  const hub = group.tools["touch-hub"];
+  assert.ok(!controls.touch, "does not register an unsupported standalone control group");
+  const hub = controls.tokens.tools["touch-hub"];
   assert.strictEqual(hub.button, true, "hub is an action button, not a toggle tool");
+  assert.strictEqual(hub.toggle, false, "hub cannot become an active toggle");
+  assert.strictEqual(hub.order, 2, "hub follows the pre-existing Token tool");
   assert.strictEqual(typeof hub.onChange, "function", "hub carries onChange (v13+ handler)");
   assert.strictEqual(typeof hub.onClick, "function", "hub keeps onClick (v12 handler)");
 });
 
-await checkAsync("hub button click opens the GM hub", async () => {
-  const controls = {};
+await checkAsync("hub tool ignores deactivation and opens only on activation", async () => {
+  const controls = { tokens: { name: "tokens", tools: {} } };
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  await controls.touch.tools["touch-hub"].onChange();
-  assert.ok(window.touch.hub?.rendered, "hub rendered via control click");
+  const originalOpenHub = window.touch.openHub;
+  let opens = 0;
+  window.touch.openHub = async () => { opens += 1; };
+  try {
+    await controls.tokens.tools["touch-hub"].onChange({}, false);
+    await controls.tokens.tools["touch-hub"].onChange({}, true);
+  } finally {
+    window.touch.openHub = originalOpenHub;
+  }
+  assert.strictEqual(opens, 1, "only activation opens the hub");
 });
 
 check("v12 legacy array controls still supported", () => {
-  const controls = [];
+  const controls = [{ name: "token", tools: [] }];
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  const group = controls.find((c) => c?.name === "touch");
-  assert.ok(group, "group pushed onto the legacy array");
-  assert.ok(Array.isArray(group.tools) && group.tools.some((t) => t.name === "touch-hub"), "array tools kept");
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+  const token = controls.find((control) => control?.name === "token");
+  assert.ok(token.tools.some((tool) => tool.name === "touch-hub"), "hub added to the legacy Token controls");
+  assert.ok(token.tools.some((tool) => tool.name === "touch-viewer"), "viewer added to the legacy Token controls");
+  assert.strictEqual(token.tools.filter((tool) => tool.name === "touch-viewer").length, 1, "repeated hook calls do not duplicate tools");
+});
+
+check("record controls accept the legacy Token key and safely ignore missing Token controls", () => {
+  const legacyRecord = { token: { name: "token", tools: {} } };
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(legacyRecord);
+  assert.ok(legacyRecord.token.tools["touch-viewer"], "legacy record key receives the viewer");
+  assert.doesNotThrow(() => {
+    for (const fn of Hooks.events.getSceneControlButtons ?? []) fn({});
+  }, "unrelated control records are left unchanged");
+});
+
+check("non-GM controls omit the GM hub without hiding player-safe actions", () => {
+  const previousGM = game.user.isGM;
+  game.user.isGM = false;
+  try {
+    const controls = { tokens: { name: "tokens", tools: {} } };
+    for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+    assert.ok(!controls.tokens.tools["touch-hub"], "GM hub is not registered for players");
+    assert.ok(controls.tokens.tools["touch-viewer"], "viewer remains available");
+  } finally {
+    game.user.isGM = previousGM;
+  }
 });
 
 // ------------------------------------------------------------------ summary

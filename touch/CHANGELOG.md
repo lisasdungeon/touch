@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 — 2026-09-21
+
+- Restored the Touch scene-control entry through the supported Token controls
+  path across Foundry VTT 12 through 14.
+- Declared the module socket capability required by Touch's socket listener.
+
 ## 0.1.2 — 2026-09-21
 
 - Added a clean E2E runner for isolated Foundry mock processes.
