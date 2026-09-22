@@ -1,9 +1,9 @@
 /** Attach Touch's live PIXI surfaces directly to Foundry's interface group. */
-import { RingLayer } from "./rings.js?release=0.1.12";
-import { WaypointLayer } from "./waypointLayer.js?release=0.1.12";
-import { PathwayLayer } from "./pathwayLayer.js?release=0.1.12";
-import { HypergridLayer } from "./hypergridLayer.js?release=0.1.12";
-import { ZoneGridLayer } from "./zoneGridLayer.js?release=0.1.12";
+import { RingLayer } from "./rings.js?release=0.1.13";
+import { WaypointLayer } from "./waypointLayer.js?release=0.1.13";
+import { PathwayLayer } from "./pathwayLayer.js?release=0.1.13";
+import { HypergridLayer } from "./hypergridLayer.js?release=0.1.13";
+import { ZoneGridLayer } from "./zoneGridLayer.js?release=0.1.13";
 
 const owned = new Map();
 const definitions = [

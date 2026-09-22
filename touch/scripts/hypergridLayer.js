@@ -4,13 +4,20 @@ import {
   GRID_AXIS,
   PHYSICAL_CUBE_COUNT,
   PHYSICAL_WAYPOINT_COUNT,
+  ROOM_FEET,
   VOXEL_EDGE_COUNT,
   sceneWaypoint,
-} from "./hypergrid.js?release=0.1.12";
-import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.12";
+} from "./hypergrid.js?release=0.1.13";
+import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.13";
 
 const LASER = 0x5eead4;
 const VOXEL_GAP = 0.08;
+let threeRoomPromise;
+
+function loadThreeRoom() {
+  threeRoomPromise ??= import("./threeRoom.js?release=0.1.13");
+  return threeRoomPromise;
+}
 
 function gridPixels(dimensions) {
   const distance = Math.max(1, Number(dimensions.distance) || CELL_FEET);
@@ -18,6 +25,17 @@ function gridPixels(dimensions) {
   const widthFit = Math.max(1, Number(dimensions.sceneWidth) || native * GRID_AXIS) / (GRID_AXIS * 1.32);
   const heightFit = Math.max(1, Number(dimensions.sceneHeight) || native * GRID_AXIS) / (GRID_AXIS * 0.5);
   return Math.min(native, widthFit, heightFit);
+}
+
+function roomSurface(dimensions) {
+  const distance = Math.max(1, Number(dimensions.distance) || CELL_FEET);
+  const physicalPixels = Math.max(1, Number(dimensions.size) || 100) * ROOM_FEET / distance;
+  return {
+    x: Number(dimensions.sceneX) || 0,
+    y: Number(dimensions.sceneY) || 0,
+    width: Math.min(Math.max(1, Number(dimensions.sceneWidth) || physicalPixels), physicalPixels),
+    height: Math.min(Math.max(1, Number(dimensions.sceneHeight) || physicalPixels), physicalPixels),
+  };
 }
 
 function project(x, y, z, step, dimensions) {
@@ -57,16 +75,41 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
 
   async _draw() {
     await super._draw();
-    this.rebuildGeometry();
+    await this.rebuildGeometry();
   }
 
   /** Rebuild static geometry only when Foundry creates or resizes the scene. */
-  rebuildGeometry() {
+  async rebuildGeometry() {
+    const build = (this.buildId ?? 0) + 1;
+    this.buildId = build;
+    this.#disposeWebGL();
     this.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.voxels = null;
     this.memory = null;
     if (!canvas.scene || !canvas.dimensions) return;
     const dimensions = canvas.dimensions;
+    const surface = roomSurface(dimensions);
+    try {
+      const { createThreeRoomRenderer } = await loadThreeRoom();
+      if (build !== this.buildId || this.destroyed) return;
+      const room = createThreeRoomRenderer({
+        width: surface.width,
+        height: surface.height,
+        axis: GRID_AXIS,
+      });
+      if (room) {
+        this.#mountWebGL(room, surface);
+        this.refreshHypergrid();
+        return;
+      }
+    } catch (error) {
+      console.warn("Touch | WebGL room unavailable; using PIXI wireframe fallback.", error);
+    }
+    if (build !== this.buildId || this.destroyed) return;
+    this.#buildPixiFallback(dimensions);
+  }
+
+  #buildPixiFallback(dimensions) {
     const step = gridPixels(dimensions);
     const voxels = new PIXI.Graphics();
     const memory = new PIXI.Graphics();
@@ -93,10 +136,68 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
   }
 
   /** Pings update only the small memory surface; static voxels stay cached. */
-  refreshHypergrid() {
+  refreshHypergrid(pings = []) {
+    if (this.threeRoom) {
+      const dimensions = canvas.dimensions;
+      const options = {
+        dimensions,
+        storeyHeight: Math.max(1, Number(game.settings.get("touch", "storeyHeight")) || 10),
+      };
+      const markers = [];
+      for (const record of window.touch?.memoryMap?.() ?? []) {
+        const point = memoryPoint(record, options);
+        if (point) markers.push({ ...point, color: heatColor(record.currentHeat) });
+      }
+      this.threeRoom.setMarkers(markers);
+      this.threeRoom.flashContacts(pings, dimensions, CELL_FEET);
+      this.#updateTexture();
+      return;
+    }
     if (!this.voxels || !this.memory) return this.rebuildGeometry();
     this.memory.clear?.();
     this.#drawMemory(this.memory, this.step, canvas.dimensions);
+  }
+
+  #mountWebGL(room, surface) {
+    const texture = PIXI.Texture.from(room.canvas);
+    const sprite = new PIXI.Sprite(texture);
+    sprite.eventMode = "none";
+    sprite.position.set(surface.x, surface.y);
+    sprite.width = surface.width;
+    sprite.height = surface.height;
+    sprite.alpha = 0.9;
+    this.addChild(sprite);
+    this.threeRoom = room;
+    this.webglTexture = texture;
+    room.onRender = () => this.#updateTexture();
+    this.voxels = sprite;
+    this.lattice = sprite;
+    this.memory = sprite;
+    this.cacheMode = "webgl";
+    this.renderMode = "three-webgl";
+    this.cubeCount = PHYSICAL_CUBE_COUNT;
+    this.waypointCount = PHYSICAL_WAYPOINT_COUNT;
+    this.voxelEdgeCount = VOXEL_EDGE_COUNT;
+  }
+
+  #updateTexture() {
+    this.webglTexture?.source?.update?.();
+    this.webglTexture?.baseTexture?.update?.();
+  }
+
+  #disposeWebGL() {
+    if (!this.threeRoom) return;
+    this.threeRoom.onRender = null;
+    this.threeRoom.dispose();
+    this.webglTexture?.destroy?.(true);
+    this.threeRoom = null;
+    this.webglTexture = null;
+  }
+
+  destroy(options) {
+    this.buildId = (this.buildId ?? 0) + 1;
+    this.#disposeWebGL();
+    return super.destroy(options);
   }
 
   #drawVoxels(graphics, step, dimensions) {

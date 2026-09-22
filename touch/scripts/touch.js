@@ -2,7 +2,7 @@
 import { MODULE_ID, SOCKET_NAME, SOCKET_MESSAGES, DEFAULTS, CAMERAS, SETTINGS } from "./constants.js";
 import { collectWalls } from "./emitters.js";
 import { registerHelpers } from "./helpers.js";
-import { registerRuntime } from "./runtime.js";
+import { registerRuntime } from "./runtime.js?release=0.1.13";
 import { bindCanvasInteractions, unbindCanvasInteractions } from "./canvasInteractions.js";
 
 let viewerClassPromise;
@@ -10,17 +10,17 @@ let hubClassPromise;
 let canvasLayersPromise;
 
 async function loadViewerClass() {
-  viewerClassPromise ??= import("./viewer.js?release=0.1.12").then(({ SonarViewer }) => SonarViewer);
+  viewerClassPromise ??= import("./viewer.js?release=0.1.13").then(({ SonarViewer }) => SonarViewer);
   return viewerClassPromise;
 }
 
 async function loadHubClass() {
-  hubClassPromise ??= import("./hub.js?release=0.1.12").then(({ SonarHub }) => SonarHub);
+  hubClassPromise ??= import("./hub.js?release=0.1.13").then(({ SonarHub }) => SonarHub);
   return hubClassPromise;
 }
 
 async function loadCanvasLayers() {
-  canvasLayersPromise ??= import("./canvasLayers.js?release=0.1.12");
+  canvasLayersPromise ??= import("./canvasLayers.js?release=0.1.13");
   return canvasLayersPromise;
 }
 

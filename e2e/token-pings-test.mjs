@@ -67,17 +67,32 @@ await check("the automatic global cadence schedules every visible token", () => 
   for (const id of visibleTokenIds) assert.ok(due.includes(id), `${id} not scheduled`);
 });
 
-await check("movement inside the room immediately emits an addressed ping", async () => {
+await check("crossing a room line emits one addressed contact ping", async () => {
   game.socket.outbox.length = 0;
   const hero = sampleScene.tokens.get("tok-hero");
   await hero.update({ x: 650, y: 550 });
   const ping = game.socket.outbox.at(-1)?.payload?.pings?.[0];
   assert.strictEqual(ping?.id, "token.tok-hero");
   assert.strictEqual(ping?.movement, true);
+  assert.deepStrictEqual(ping?.latticeContact, {
+    from: { x: 2, y: 0, z: 2, key: "2:0:2" },
+    to: { x: 3, y: 0, z: 2, key: "3:0:2" },
+  });
   assert.deepStrictEqual(ping?.address, {
     zone: "3D", row: 3, column: "D", level: 1, levelElevation: 0,
     cubeTier: 1, cube: "3D-L01-T01",
   });
+});
+
+await check("movement inside one cube stays silent until another line is touched", async () => {
+  game.socket.outbox.length = 0;
+  const hero = sampleScene.tokens.get("tok-hero");
+  await hero.update({ x: 690, y: 590 });
+  assert.strictEqual(game.socket.outbox.length, 0, "no cube boundary was crossed");
+  await hero.update({ elevation: 10 });
+  const ping = game.socket.outbox.at(-1)?.payload?.pings?.[0];
+  assert.strictEqual(ping?.id, "token.tok-hero");
+  assert.deepStrictEqual(ping?.latticeContact?.to, { x: 3, y: 1, z: 2, key: "3:1:2" });
 });
 
 await check("lights, sounds, walls, and moving tiles also trip the lattice", async () => {

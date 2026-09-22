@@ -221,6 +221,7 @@ export class Pinger {
       color: emitter.color ?? null,
       born: Date.now(),
       movement: Boolean(emitter.movement),
+      latticeContact: emitter.latticeContact ?? null,
       // The object's persistent identity id, when it has been assigned or
       // stamped by a prior crossing — surfaced on viewer blips.
       identity: emitter.identity ?? null,
@@ -299,6 +300,6 @@ export class Pinger {
       for (const frame of frames) window.touch?.viewer?.ingestFrame(frame);
     }
     window.touch?.viewer?.flush?.();
-    canvas.touchHypergrid?.refreshHypergrid?.();
+    canvas.touchHypergrid?.refreshHypergrid?.(payload.pings);
   }
 }

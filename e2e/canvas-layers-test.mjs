@@ -45,8 +45,8 @@ await check("canvasTearDown removes every owned surface", async () => {
 });
 
 await check("one failed surface cannot block waypoints, pathways, or rings", async () => {
-  const { ZoneGridLayer } = await import("../touch/scripts/zoneGridLayer.js?release=0.1.12");
-  const { ensureTouchCanvasLayers, teardownTouchCanvasLayers } = await import("../touch/scripts/canvasLayers.js?release=0.1.12");
+  const { ZoneGridLayer } = await import("../touch/scripts/zoneGridLayer.js?release=0.1.13");
+  const { ensureTouchCanvasLayers, teardownTouchCanvasLayers } = await import("../touch/scripts/canvasLayers.js?release=0.1.13");
   const original = ZoneGridLayer.prototype.draw;
   const logged = console.error;
   ZoneGridLayer.prototype.draw = async () => { throw new Error("simulated zone failure"); };

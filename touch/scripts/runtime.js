@@ -3,7 +3,7 @@ import { MODULE_ID, SOCKET_NAME, DEFAULTS, CAMERAS, SETTINGS, FLAG_SCOPE } from 
 import { WaveField } from "./wavefield.js";
 import { NodeMemory, heatColor, captureSignature } from "./memory.js";
 import { TrackRegistry } from "./tracks.js";
-import { Pinger } from "./pinger.js";
+import { Pinger } from "./pinger.js?release=0.1.13";
 import { CameraArray } from "./cameras.js";
 import { collectEmitters, collectWalls, getConfig, setConfig } from "./emitters.js";
 import { levelsActive, wallHeightActive, getLevelsRange, getWallHeightRange, setLevelsRange, setWallHeightRange, pingDocument } from "./elevation.js";
@@ -19,8 +19,9 @@ import {
   findDocumentByEmitterId,
   pingWaypoint,
   makeEmitter,
-  insideScene,
-} from "./runtime-helpers.js";
+  documentPosition,
+  latticeCell,
+} from "./runtime-helpers.js?release=0.1.13";
 
 export function registerRuntime(loadViewerClass, loadHubClass) {
   Hooks.on("ready", () => {
@@ -368,26 +369,66 @@ export function registerRuntime(loadViewerClass, loadHubClass) {
       }
       if (crossed) touch.hub?.render();
     };
+    const movementPositions = new Map();
+    const movementKey = (doc, kind) => `${doc?.scene?.id ?? canvas.scene?.id ?? "scene"}:${kind}.${doc?.id}`;
+    const rememberMovementPosition = (doc, kind) => {
+      const position = documentPosition(doc, kind);
+      if (position) movementPositions.set(movementKey(doc, kind), position);
+      return position;
+    };
+    const seedMovementPositions = () => {
+      movementPositions.clear();
+      const scene = canvas.scene;
+      if (!scene) return;
+      const groups = [
+        ["token", scene.tokens], ["light", scene.lights], ["sound", scene.sounds],
+        ["wall", scene.walls], ["tile", scene.tiles],
+      ];
+      for (const [kind, documents] of groups) {
+        for (const doc of documents ?? []) rememberMovementPosition(doc, kind);
+      }
+    };
+    seedMovementPositions();
+    Hooks.on("canvasReady", seedMovementPositions);
     const emitMovementPing = (doc, change, kind) => {
       if (!game.user.isGM || doc?._touchStamping || !changedPosition(change)) return false;
+      const key = movementKey(doc, kind);
+      const previous = movementPositions.get(key) ?? null;
+      const current = rememberMovementPosition(doc, kind);
+      const from = latticeCell(previous);
+      const to = latticeCell(current);
+      if (!to || from?.key === to.key) return false;
       const emitter = makeEmitter(doc, kind);
-      if (!emitter || !insideScene(emitter.x, emitter.y)) return false;
+      if (!emitter) return false;
       emitter.movement = true;
+      emitter.latticeContact = { from, to };
       touch.pinger?.emitOne(emitter);
       return true;
     };
     touch.emitMovementPing = emitMovementPing;
-    Hooks.on("createToken", (doc) => { touch.pinger?.emitOne(makeEmitter(doc, "token")); emitPathwayTraces(doc); });
-    Hooks.on("updateToken", (doc, change) => {
-      if (emitMovementPing(doc, change, "token")) emitPathwayTraces(doc);
+    Hooks.on("createToken", (doc) => {
+      rememberMovementPosition(doc, "token");
+      touch.pinger?.emitOne(makeEmitter(doc, "token"));
+      emitPathwayTraces(doc);
     });
-    Hooks.on("createAmbientLight", (doc) => touch.pinger?.emitOne(makeEmitter(doc, "light")));
-    Hooks.on("createAmbientSound", (doc) => touch.pinger?.emitOne(makeEmitter(doc, "sound")));
+    Hooks.on("updateToken", (doc, change) => {
+      emitMovementPing(doc, change, "token");
+      if (changedPosition(change)) emitPathwayTraces(doc);
+    });
+    Hooks.on("createAmbientLight", (doc) => {
+      rememberMovementPosition(doc, "light");
+      touch.pinger?.emitOne(makeEmitter(doc, "light"));
+    });
+    Hooks.on("createAmbientSound", (doc) => {
+      rememberMovementPosition(doc, "sound");
+      touch.pinger?.emitOne(makeEmitter(doc, "sound"));
+    });
     Hooks.on("updateAmbientLight", (doc, change) => emitMovementPing(doc, change, "light"));
     Hooks.on("updateAmbientSound", (doc, change) => emitMovementPing(doc, change, "sound"));
+    Hooks.on("createTile", (doc) => rememberMovementPosition(doc, "tile"));
     Hooks.on("updateTile", (doc, change) => emitMovementPing(doc, change, "tile"));
     const syncWalls = () => { if (canvas.scene) touch.wavefield?.setWalls(canvas.scene.id, collectWalls(canvas.scene)); };
-    Hooks.on("createWall", syncWalls);
+    Hooks.on("createWall", (doc) => { rememberMovementPosition(doc, "wall"); syncWalls(); });
     Hooks.on("updateWall", (doc, change) => { emitMovementPing(doc, change, "wall"); syncWalls(); });
     Hooks.on("deleteWall", syncWalls);
     console.debug("Touch | ready");

@@ -9,7 +9,10 @@ if (existsSync(output)) throw new Error(`Refusing to overwrite existing release 
 
 const root = resolve(import.meta.dirname, "..");
 const moduleRoot = resolve(root, "touch");
-const files = ["module.json", "CHANGELOG.md", "LICENSE", "README.md", "lang", "scripts", "styles", "templates"];
+const files = [
+  "module.json", "CHANGELOG.md", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md",
+  "lang", "scripts", "styles", "templates", "vendor",
+];
 
 for (const entry of files) {
   if (!existsSync(resolve(moduleRoot, entry))) throw new Error(`Missing release input: ${entry}`);

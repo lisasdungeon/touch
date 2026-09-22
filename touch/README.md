@@ -5,7 +5,8 @@
 Touch turns any scene into a living sonar field. Tokens, lights, sounds and
 interior walls emit expanding pings; six perimeter cameras (top, bottom and the
 four sides) watch the echoes and reconstruct the scene into a **4D room**
-(x, y, z, t) rendered entirely with CSS.
+(x, y, z, t) rendered with a live WebGL scene surface and a lightweight SVG
+Viewer.
 
 ## Features
 
@@ -15,9 +16,11 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   (sound / light / both), **facing cone** (angle + field of view), **ping
   frequency** (its own seconds-per-ping, 0 = follow the global pulse) and
   **feedback tone** (low / mid / high); nothing about your system is required.
-- **Movement sensing** — moving tokens, lights, sounds, walls, and tiles fire an
-  immediate addressed ping while they remain inside the room. The GM is the
-  single movement authority, preventing duplicate multiplayer emissions.
+- **Laser-trip movement sensing** — tokens, lights, sounds, walls, and tiles
+  stay silent while moving inside one ten-foot cube. Crossing an X, depth, or
+  elevation boundary fires one addressed ping and briefly lights the contacted
+  cube edges. The GM is the single movement authority, preventing duplicate
+  multiplayer emissions.
 - **Scene controls** — Touch installs its own top-level control group
   (broadcast-tower icon, reachable with the **T** hotkey cycle) holding the
   **Sonar Viewer**, the **Sonar GM Hub** (GM only), and the Waypoint and
@@ -38,13 +41,13 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
 - **Junction waypoints** — where two pathways cross, a shared junction
   waypoint (amber cross-in-diamond) is created automatically and removed if
   the crossing disappears. Move a line and its junctions follow.
-- **Live 4D wireframe room** — Touch renders a fixed 100 × 100 × 100-foot
-  room directly on the active scene as laser-thin horizontal, vertical, and
-  depth lines. The same room appears in the viewer as **1,000 stacked CSS
-  wireframe cubes**: one readable cube for every ten-foot X/Y/Z cell. The
-  1,331 shared cube corners are the room's waypoint nodes; they retain and
-  display the scene's decaying memory. Twenty five-second temporal states
-  form the fourth axis without materializing 185,220 duplicate DOM nodes.
+- **Live 4D wireframe room** — Touch renders a bounded 100 × 100 × 100-foot
+  room directly on the active scene with Three.js/WebGL: a perspective camera,
+  real X/Y/Z depth, a visible outer room shell, and **1,000 static wireframe
+  cubes** inside it. One GPU line buffer holds every laser-thin edge and never
+  animates at idle. The same room appears in the Viewer as a lightweight SVG
+  projection. Its 1,331 shared corners retain the scene's decaying memory; the
+  ten temporal states form the fourth axis without duplicating the geometry.
 - **3D sonar lattice** — optional pathway rails can still be generated from
   the GM Hub. Each gridline is a real pathway — it pings, traces, and passes
   through the whole pipeline — and same-storey crossings become junction

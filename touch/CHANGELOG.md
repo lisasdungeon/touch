@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.13 — 2026-09-22
+
+- Added a bundled Three.js WebGL2 renderer for the live Foundry scene, using a
+  real perspective camera, depth testing, a bounded outer room shell, and one
+  static GPU line buffer containing all 1,000 ten-foot cubes.
+- Kept the grid inside its fixed 100 × 100-foot scene footprint instead of
+  stretching the WebGL surface across maps larger than the room.
+- Made the renderer event-driven: there is no animation loop, and only memory
+  changes or actual lattice contacts upload a new frame to PIXI.
+- Changed movement sensing into a laser-trip grid. Motion within one cube is
+  silent; crossing an X, depth, or elevation boundary emits one addressed ping
+  and briefly lights only the contacted cube's wire edges.
+- Preserved the lightweight PIXI renderer as a fallback when WebGL2 is not
+  available, and bundled all Three.js files and licensing without a CDN.
+- Added a fresh 0.1.13 entrypoint and versioned dependency graph to prevent
+  clients from retaining the previous canvas and movement code.
+
 ## 0.1.12 — 2026-09-22
 
 - Fixed the PIXI 7 text-style crash in the numbered scene-zone layer by using
