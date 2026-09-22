@@ -5,6 +5,7 @@
  * Ring emission stays in rings.js; this layer is the persistent visual.
  */
 import { getWaypoints } from "./waypoints.js";
+import { fillCircle, fillPath, fillStrokePath, strokePath } from "./pixiCompat.js";
 
 const DEG = Math.PI / 180;
 const WP_COLOR = 0x5eead4;
@@ -64,12 +65,15 @@ export class WaypointLayer extends foundry.canvas.layers.CanvasLayer {
 
       // Diamond marker (junction waypoints get a cross-in-diamond look)
       const marker = new PIXI.Graphics();
-      marker.moveTo(0, -7).lineTo(6, 0).lineTo(0, 7).lineTo(-6, 0).closePath()
-        .fill({ color: wp.junction ? 0xfbbf24 : WP_COLOR, alpha: 0.9 })
-        .stroke({ width: 1, color: 0x0a0f14, alpha: 0.8 });
+      fillStrokePath(
+        marker,
+        { color: wp.junction ? 0xfbbf24 : WP_COLOR, alpha: 0.9 },
+        { width: 1, color: 0x0a0f14, alpha: 0.8 },
+        (target) => target.moveTo(0, -7).lineTo(6, 0).lineTo(0, 7).lineTo(-6, 0).closePath()
+      );
       if (wp.junction) {
-        marker.moveTo(-4, 0).lineTo(4, 0).moveTo(0, -4).lineTo(0, 4)
-          .stroke({ width: 1.5, color: 0x0a0f14, alpha: 0.9 });
+        strokePath(marker, { width: 1.5, color: 0x0a0f14, alpha: 0.9 }, (target) =>
+          target.moveTo(-4, 0).lineTo(4, 0).moveTo(0, -4).lineTo(0, 4));
       }
       holder.addChild(marker);
 
@@ -86,17 +90,14 @@ export class WaypointLayer extends foundry.canvas.layers.CanvasLayer {
   #drawCone(g, angleDeg, fovDeg, radius = 34) {
     const half = (fovDeg / 2) * DEG;
     const center = (angleDeg - 90) * DEG; // 0° = up in screen space
-    g.moveTo(0, 0);
     if (fovDeg >= 360) {
-      g.circle(0, 0, radius).fill({ color: WP_COLOR, alpha: 0.18 });
+      fillCircle(g, 0, 0, radius, { color: WP_COLOR, alpha: 0.18 });
       return;
     }
-    g.arc(0, 0, radius, center - half, center + half)
-      .lineTo(0, 0)
-      .closePath()
-      .fill({ color: WP_COLOR, alpha: 0.28 });
-    g.arc(0, 0, radius, center - half, center + half)
-      .stroke({ width: 1, color: WP_COLOR, alpha: 0.5 });
+    fillPath(g, { color: WP_COLOR, alpha: 0.28 }, (target) =>
+      target.moveTo(0, 0).arc(0, 0, radius, center - half, center + half).lineTo(0, 0).closePath());
+    strokePath(g, { width: 1, color: WP_COLOR, alpha: 0.5 }, (target) =>
+      target.arc(0, 0, radius, center - half, center + half));
   }
 
   // ------------------------------------------------------------- interaction

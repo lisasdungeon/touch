@@ -143,7 +143,10 @@ Hooks.on("canvasReady", async () => {
 
 Hooks.on("updateScene", (scene, changes) => {
   if (scene?.id !== canvas?.scene?.id) return;
-  if (["width", "height", "padding", "grid"].some((key) => key in (changes ?? {}))) canvas.touchZones?.refreshZones();
+  if (["width", "height", "padding", "grid"].some((key) => key in (changes ?? {}))) {
+    canvas.touchHypergrid?.rebuildGeometry?.();
+    canvas.touchZones?.refreshZones();
+  }
 });
 
 Hooks.on("canvasTearDown", () => {

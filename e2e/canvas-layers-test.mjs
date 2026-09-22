@@ -24,7 +24,8 @@ await check("canvasReady creates and draws every Touch surface", async () => {
   for (const fn of Hooks.events.canvasReady ?? []) await fn();
   for (const property of ["touchHypergrid", "touchZones", "touchPathways", "touchWaypoints", "touchRings"]) {
     assert.ok(canvas[property], `${property} missing`);
-    assert.strictEqual(canvas[property].parent, canvas.interface, `${property} not attached to interface`);
+    const expectedParent = ["touchHypergrid", "touchZones"].includes(property) ? canvas.primary.group : canvas.interface;
+    assert.strictEqual(canvas[property].parent, expectedParent, `${property} attached to the wrong Foundry group`);
     assert.ok(canvas[property].children.length > 0, `${property} was not drawn`);
     assert.strictEqual(canvas[property].visible, true, `${property} is hidden`);
     assert.strictEqual(canvas[property].renderable, true, `${property} is not renderable`);

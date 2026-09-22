@@ -42,9 +42,9 @@ await check("manifest registers the fixed cube stylesheet", async () => {
   assert.ok(manifest.flags.hotReload.includes("styles/hypergrid.css"));
 });
 
-await check("CSS defines discrete voxel faces, edges, and corner waypoints without animation", async () => {
+await check("CSS defines thin voxel edges and corner waypoints without filled faces or animation", async () => {
   assert.match(hyperCss, /\.touch-hyper-voxel-edges/);
-  assert.match(hyperCss, /\.touch-hyper-voxel-face/);
+  assert.doesNotMatch(hyperCss, /\.touch-hyper-voxel-face/);
   assert.match(hyperCss, /stroke: #5eead4/);
   assert.match(hyperCss, /\.touch-hyper-waypoint/);
   assert.match(hyperCss, /touch-hyper-memory/);
@@ -66,11 +66,12 @@ await check("the room and six feeds are bounded inside the Viewer", async () => 
 console.log("== Scene and viewer surfaces ==");
 await check("the fixed wireframe lattice is a live Foundry canvas layer", async () => {
   assert.ok(canvas.touchHypergrid, "registered scene layer");
-  assert.strictEqual(canvas.touchHypergrid.parent, canvas.interface, "scene lattice is attached to the live interface group");
+  assert.strictEqual(canvas.touchHypergrid.parent, canvas.primary.group, "voxel room is attached directly to the live scene group");
   assert.strictEqual(canvas.touchHypergrid.cubeCount, 20 ** 3, "scene surface draws 8,000 separate blocks");
   assert.strictEqual(canvas.touchHypergrid.voxelEdgeCount, 20 ** 3 * 12, "each scene block owns twelve edges");
   assert.strictEqual(canvas.touchHypergrid.waypointCount, 21 ** 3, "every physical corner has a waypoint");
   assert.strictEqual(canvas.touchHypergrid.children.length, 2, "laser lattice and memory graphics");
+  assert.ok(["texture", "bitmap"].includes(canvas.touchHypergrid.cacheMode), "static scene voxels are cached");
 });
 
 await check("Hub launcher opens the viewer while the viewer itself has no orbit controls", async () => {
@@ -97,10 +98,15 @@ await check("viewer draws 8,000 discrete Minecraft-style blocks across twenty ti
   assert.ok(T.viewer.element.querySelector(".touch-hyper-voxel-edges")?.getAttribute("d")?.length > 10000);
   assert.strictEqual(T.viewer.element.querySelectorAll(".touch-hyper-cube").length, 0, "no fragile cube DOM flood remains");
   assert.strictEqual(T.viewer.element.querySelector("[data-hypergrid]").dataset.hypergridRenderer, "voxels");
+  grid.update({ floorFilter: 0, storeyHeight: 10, dimensions: canvas.dimensions });
+  assert.strictEqual([...tiers].filter((tier) => tier.style.display !== "none").length, 2, "F0 renders only its two five-foot tiers");
+  grid.update({ floorFilter: null, storeyHeight: 10, dimensions: canvas.dimensions });
 });
 
 await check("a ping lights memory-bearing waypoints at separate elevations", async () => {
+  const staticSceneVoxels = canvas.touchHypergrid.voxels;
   T.pinger.pulse({ broadcast: false, local: true });
+  assert.strictEqual(canvas.touchHypergrid.voxels, staticSceneVoxels, "pings update memory without rebuilding static scene voxels");
   const grid = await waitForGrid(T.viewer);
   assert.ok(grid.active.size > 0, "incoming contacts activate corners");
   const heights = new Set([...grid.active].map((point) => point.dataset.y));

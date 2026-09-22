@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.10 — 2026-09-22
+
+- Removed every voxel face fill so the room uses only thin, static cube edges
+  derived from the Quantum Portal's six-face cube topology.
+- Fixed live Foundry scene initialization on the server's PIXI runtime by
+  supporting both legacy and current Graphics drawing APIs across voxel,
+  waypoint, pathway, and token-ring surfaces.
+- Moved the voxel room and numbered zones into Foundry's primary scene group so
+  they render on the map independently of the Viewer and GM Hub.
+- Cached the 96,000 static scene edges once; pings now redraw only active memory
+  markers instead of rebuilding the complete room.
+- Made floor filtering control the base geometry: a 10-foot floor displays only
+  its two five-foot voxel tiers, while the all-floor view uses reduced opacity.
+
 ## 0.1.9 — 2026-09-22
 
 - Replaced the continuous room cage with 8,000 distinct Minecraft-style voxel

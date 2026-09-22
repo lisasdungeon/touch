@@ -7,12 +7,17 @@ import { ZoneGridLayer } from "./zoneGridLayer.js";
 
 const owned = new Map();
 const definitions = [
-  ["touchHypergrid", HypergridLayer, 900],
-  ["touchZones", ZoneGridLayer, 910],
-  ["touchPathways", PathwayLayer, 920],
-  ["touchWaypoints", WaypointLayer, 930],
-  ["touchRings", RingLayer, 940],
+  ["touchHypergrid", HypergridLayer, 900, "scene"],
+  ["touchZones", ZoneGridLayer, 910, "scene"],
+  ["touchPathways", PathwayLayer, 920, "interface"],
+  ["touchWaypoints", WaypointLayer, 930, "interface"],
+  ["touchRings", RingLayer, 940, "interface"],
 ];
+
+function parentFor(surface) {
+  if (surface === "scene" && canvas?.primary?.group?.addChild) return canvas.primary.group;
+  return canvas?.interface ?? canvas?.stage;
+}
 
 function expose(property, layer) {
   Object.defineProperty(canvas, property, {
@@ -25,9 +30,9 @@ function expose(property, layer) {
 
 /** Build and draw every Touch surface after Foundry's core canvas is ready. */
 export async function ensureTouchCanvasLayers() {
-  const parent = canvas?.interface ?? canvas?.stage;
-  if (!parent?.addChild) throw new Error("Foundry canvas interface is unavailable");
-  for (const [property, LayerClass, zIndex] of definitions) {
+  for (const [property, LayerClass, zIndex, surface] of definitions) {
+    const parent = parentFor(surface);
+    if (!parent?.addChild) throw new Error(`Foundry ${surface} canvas group is unavailable`);
     let layer = owned.get(property);
     if (!layer || layer.destroyed) {
       layer = new LayerClass();
@@ -43,7 +48,8 @@ export async function ensureTouchCanvasLayers() {
     layer.renderable = true;
     layer.alpha = 1;
   }
-  parent.sortChildren?.();
+  canvas?.primary?.group?.sortChildren?.();
+  canvas?.interface?.sortChildren?.();
   return Object.fromEntries(owned);
 }
 

@@ -1,4 +1,4 @@
-/** Canvas projection of Touch's fixed voxel room and its memory corners. */
+/** Lightweight live-scene projection of Touch's voxel room and memory. */
 import {
   CELL_FEET,
   GRID_AXIS,
@@ -7,6 +7,7 @@ import {
   VOXEL_EDGE_COUNT,
   sceneWaypoint,
 } from "./hypergrid.js";
+import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js";
 
 const LASER = 0x5eead4;
 const VOXEL_GAP = 0.08;
@@ -49,11 +50,6 @@ function heatColor(heat) {
   return start.reduce((hex, channel, index) => (hex << 8) + Math.round(channel + (end[index] - channel) * ratio), 0);
 }
 
-/**
- * A static isometric canvas view of the same 20 × 20 × 20 cube stack used
- * by the CSS viewer. It is scene-relative, uses no polling, and redraws only
- * after canvas setup or an incoming Touch event.
- */
 export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
   static get layerOptions() {
     return foundry.utils.mergeObject(super.layerOptions, { name: "touchHypergrid", zIndex: 59 });
@@ -61,11 +57,14 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
 
   async _draw() {
     await super._draw();
-    this.refreshHypergrid();
+    this.rebuildGeometry();
   }
 
-  refreshHypergrid() {
+  /** Rebuild static geometry only when Foundry creates or resizes the scene. */
+  rebuildGeometry() {
     this.removeChildren().forEach((child) => child.destroy({ children: true }));
+    this.voxels = null;
+    this.memory = null;
     if (!canvas.scene || !canvas.dimensions) return;
     const dimensions = canvas.dimensions;
     const step = gridPixels(dimensions);
@@ -74,54 +73,61 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
     voxels.eventMode = "none";
     memory.eventMode = "none";
     this.#drawVoxels(voxels, step, dimensions);
-    this.#drawWaypoints(voxels, step, dimensions);
-    this.#drawMemory(memory, step, dimensions);
     this.addChild(voxels);
     this.addChild(memory);
+    if (typeof voxels.cacheAsTexture === "function") {
+      voxels.cacheAsTexture({ resolution: 0.5, antialias: false });
+      this.cacheMode = "texture";
+    } else {
+      voxels.cacheAsBitmap = true;
+      this.cacheMode = "bitmap";
+    }
     this.voxels = voxels;
     this.lattice = voxels;
     this.memory = memory;
+    this.step = step;
     this.cubeCount = PHYSICAL_CUBE_COUNT;
     this.waypointCount = PHYSICAL_WAYPOINT_COUNT;
     this.voxelEdgeCount = VOXEL_EDGE_COUNT;
+    this.refreshHypergrid();
+  }
+
+  /** Pings update only the small memory surface; static voxels stay cached. */
+  refreshHypergrid() {
+    if (!this.voxels || !this.memory) return this.rebuildGeometry();
+    this.memory.clear?.();
+    this.#drawMemory(this.memory, this.step, canvas.dimensions);
   }
 
   #drawVoxels(graphics, step, dimensions) {
-    const line = (from, to) => graphics.moveTo(from.x, from.y).lineTo(to.x, to.y);
     const pairs = [
       [0, 1], [0, 2], [0, 4], [7, 3], [7, 5], [7, 6],
       [1, 3], [1, 5], [2, 3], [2, 6], [4, 5], [4, 6],
     ];
-    for (let y = 0; y < GRID_AXIS; y++) for (let z = 0; z < GRID_AXIS; z++) {
-      for (let x = 0; x < GRID_AXIS; x++) {
-        const low = VOXEL_GAP;
-        const high = 1 - VOXEL_GAP;
-        const points = [
-          project(x + low, y + low, z + low, step, dimensions),
-          project(x + high, y + low, z + low, step, dimensions),
-          project(x + low, y + high, z + low, step, dimensions),
-          project(x + high, y + high, z + low, step, dimensions),
-          project(x + low, y + low, z + high, step, dimensions),
-          project(x + high, y + low, z + high, step, dimensions),
-          project(x + low, y + high, z + high, step, dimensions),
-          project(x + high, y + high, z + high, step, dimensions),
-        ];
-        for (const [from, to] of pairs) line(points[from], points[to]);
+    strokePath(graphics, { width: 0.5, color: LASER, alpha: 0.14 }, (target) => {
+      const line = (from, to) => target.moveTo(from.x, from.y).lineTo(to.x, to.y);
+      for (let y = 0; y < GRID_AXIS; y++) for (let z = 0; z < GRID_AXIS; z++) {
+        for (let x = 0; x < GRID_AXIS; x++) {
+          const low = VOXEL_GAP;
+          const high = 1 - VOXEL_GAP;
+          const points = [
+            project(x + low, y + low, z + low, step, dimensions),
+            project(x + high, y + low, z + low, step, dimensions),
+            project(x + low, y + high, z + low, step, dimensions),
+            project(x + high, y + high, z + low, step, dimensions),
+            project(x + low, y + low, z + high, step, dimensions),
+            project(x + high, y + low, z + high, step, dimensions),
+            project(x + low, y + high, z + high, step, dimensions),
+            project(x + high, y + high, z + high, step, dimensions),
+          ];
+          for (const [from, to] of pairs) line(points[from], points[to]);
+        }
       }
-    }
-    graphics.stroke({ width: 0.75, color: LASER, alpha: 0.58, cap: "round", join: "round" });
-  }
-
-  #drawWaypoints(graphics, step, dimensions) {
-    const radius = Math.max(0.7, Math.min(1.5, step / 70));
-    for (let x = 0; x <= GRID_AXIS; x++) for (let y = 0; y <= GRID_AXIS; y++) for (let z = 0; z <= GRID_AXIS; z++) {
-      const point = project(x, y, z, step, dimensions);
-      graphics.circle(point.x, point.y, radius);
-    }
-    graphics.fill({ color: LASER, alpha: 0.62 });
+    });
   }
 
   #drawMemory(graphics, step, dimensions) {
+    if (!dimensions) return;
     const options = {
       dimensions,
       storeyHeight: Math.max(1, Number(game.settings.get("touch", "storeyHeight")) || 10),
@@ -131,8 +137,8 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
       if (!point) continue;
       const position = project(point.x, point.y, point.z, step, dimensions);
       const color = heatColor(record.currentHeat);
-      graphics.circle(position.x, position.y, Math.max(2, step / 20)).fill({ color, alpha: 0.88 });
-      graphics.circle(position.x, position.y, Math.max(3, step / 15)).stroke({ width: 1, color, alpha: 0.82 });
+      fillCircle(graphics, position.x, position.y, Math.max(2, step / 20), { color, alpha: 0.88 });
+      strokeCircle(graphics, position.x, position.y, Math.max(3, step / 15), { width: 1, color, alpha: 0.82 });
     }
   }
 }

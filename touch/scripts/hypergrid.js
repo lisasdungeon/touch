@@ -78,10 +78,6 @@ function pathPoint(point) {
   return `${Number(point.x.toFixed(2))},${Number(point.y.toFixed(2))}`;
 }
 
-function polygon(points) {
-  return `M${points.map(pathPoint).join("L")}Z`;
-}
-
 function edges(points, pairs) {
   return pairs.map(([from, to]) => `M${pathPoint(points[from])}L${pathPoint(points[to])}`).join("");
 }
@@ -102,9 +98,6 @@ function cubePoints(x, y, z) {
 }
 
 function voxelTier(y) {
-  const top = [];
-  const front = [];
-  const side = [];
   const wire = [];
   const pairs = [
     [0, 1], [0, 2], [0, 4], [7, 3], [7, 5], [7, 6],
@@ -113,30 +106,21 @@ function voxelTier(y) {
   for (let z = 0; z < GRID_AXIS; z++) {
     for (let x = 0; x < GRID_AXIS; x++) {
       const points = cubePoints(x, y, z);
-      top.push(polygon([points[2], points[3], points[7], points[6]]));
-      front.push(polygon([points[0], points[1], points[3], points[2]]));
-      side.push(polygon([points[1], points[5], points[7], points[3]]));
       wire.push(edges(points, pairs));
     }
   }
-  return { top: top.join(""), front: front.join(""), side: side.join(""), wire: wire.join("") };
+  return wire.join("");
 }
 
 function buildVoxels() {
   const voxels = svgNode("g", { class: "touch-hyper-voxels" });
   for (let y = 0; y < GRID_AXIS; y++) {
-    const paths = voxelTier(y);
     const tier = svgNode("g", {
       class: "touch-hyper-voxel-tier",
       "data-tier": y + 1,
       "data-cubes": GRID_AXIS ** 2,
     });
-    tier.append(
-      svgNode("path", { class: "touch-hyper-voxel-face touch-hyper-voxel-top", d: paths.top }),
-      svgNode("path", { class: "touch-hyper-voxel-face touch-hyper-voxel-front", d: paths.front }),
-      svgNode("path", { class: "touch-hyper-voxel-face touch-hyper-voxel-side", d: paths.side }),
-      svgNode("path", { class: "touch-hyper-voxel-edges", d: paths.wire })
-    );
+    tier.append(svgNode("path", { class: "touch-hyper-voxel-edges", d: voxelTier(y) }));
     voxels.appendChild(tier);
   }
   return voxels;
@@ -176,6 +160,7 @@ export class HyperGrid {
       "aria-hidden": "true",
     });
     this.voxels = buildVoxels();
+    this.tiers = [...this.voxels.querySelectorAll(".touch-hyper-voxel-tier")];
     this.lattice = this.voxels;
     this.markers = svgNode("g", { class: "touch-hyper-markers" });
     this.svg.append(this.voxels, this.markers);
@@ -191,6 +176,17 @@ export class HyperGrid {
     this.markers.replaceChildren();
     this.active.clear();
     this.waypoints.clear();
+  }
+
+  #filterTiers(floorFilter, storeyHeight) {
+    const filtered = floorFilter !== null;
+    const bottom = filtered ? floorFilter * storeyHeight : 0;
+    const top = filtered ? bottom + storeyHeight : ROOM_FEET;
+    this.host.dataset.floorMode = filtered ? "filtered" : "all";
+    for (let index = 0; index < this.tiers.length; index++) {
+      const elevation = index * CELL_FEET;
+      this.tiers[index].style.display = !filtered || (elevation >= bottom && elevation < top) ? "" : "none";
+    }
   }
 
   #marker(cell) {
@@ -288,6 +284,7 @@ export class HyperGrid {
       dimensions: payload.dimensions ?? canvas?.dimensions ?? {},
       memoryColor: payload.memoryColor,
     };
+    this.#filterTiers(options.floorFilter, options.storeyHeight);
     this.#activateMemory(payload.memory, options);
     for (const frame of framesForRoom(payload.frames)) {
       const elevation = number(frame.storey) * options.storeyHeight;

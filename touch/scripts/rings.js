@@ -5,6 +5,8 @@
  * arc sweeps in their facing direction. Rings are clipped by walls when the
  * token layer provides an LOS/interior point source.
  */
+import { strokeCircle, strokePath } from "./pixiCompat.js";
+
 export class RingLayer extends foundry.canvas.layers.CanvasLayer {
   constructor() {
     super();
@@ -90,17 +92,18 @@ export class RingLayer extends foundry.canvas.layers.CanvasLayer {
       const alpha = 0.55 * (1 - p);
       s.g.clear();
       if (s.fov >= 360) {
-        s.g.circle(0, 0, r).stroke({ width: s.weight, color: s.color, alpha });
-        s.g.circle(0, 0, r * 0.86).stroke({ width: 1, color: s.color, alpha: alpha * 0.45 });
+        strokeCircle(s.g, 0, 0, r, { width: s.weight, color: s.color, alpha });
+        strokeCircle(s.g, 0, 0, r * 0.86, { width: 1, color: s.color, alpha: alpha * 0.45 });
       } else {
         const half = (s.fov / 2) * (Math.PI / 180);
         const center = (s.angle - 90) * (Math.PI / 180); // 0° = up
-        s.g.arc(0, 0, r, center - half, center + half).stroke({ width: s.weight, color: s.color, alpha });
-        s.g.moveTo(0, 0)
-          .lineTo(Math.cos(center - half) * r, Math.sin(center - half) * r)
-          .moveTo(0, 0)
-          .lineTo(Math.cos(center + half) * r, Math.sin(center + half) * r)
-          .stroke({ width: 1, color: s.color, alpha: alpha * 0.7 });
+        strokePath(s.g, { width: s.weight, color: s.color, alpha }, (target) =>
+          target.arc(0, 0, r, center - half, center + half));
+        strokePath(s.g, { width: 1, color: s.color, alpha: alpha * 0.7 }, (target) =>
+          target.moveTo(0, 0)
+            .lineTo(Math.cos(center - half) * r, Math.sin(center - half) * r)
+            .moveTo(0, 0)
+            .lineTo(Math.cos(center + half) * r, Math.sin(center + half) * r));
       }
       return true;
     });

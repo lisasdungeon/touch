@@ -55,7 +55,7 @@ await check("token pings draw expanding rings on the live scene", async () => {
   T.pinger.pulse({ broadcast: false, local: true });
   await new Promise((resolve) => setTimeout(resolve, 24));
   assert.ok(canvas.touchRings.sprites.length >= visibleTokenIds.length);
-  assert.ok(canvas.touchRings.sprites.some(({ g }) => g.instructions.some(([type]) => type === "stroke")));
+  assert.ok(canvas.touchRings.sprites.some(({ g }) => g.instructions.some(([type]) => ["stroke", "lineStyle"].includes(type))));
   assert.strictEqual(canvas.touchRings.sprites[0].g.x, 500, "ring keeps the token's canvas X coordinate");
   assert.strictEqual(canvas.touchRings.sprites[0].g.y, 500, "ring keeps the token's canvas Y coordinate");
 });

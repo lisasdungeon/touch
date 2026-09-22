@@ -6,6 +6,7 @@
  * Endpoints drag to reshape. Ring emission stays in rings.js.
  */
 import { getPathways, samplePathway, createPathway } from "./pathways.js";
+import { fillCircle, fillStrokeCircle, strokePath } from "./pixiCompat.js";
 
 const PW_COLOR = 0x5eead4;
 
@@ -58,19 +59,19 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
       const rail = new PIXI.Graphics();
       const pts = samplePathway(pw);
       const [ax, ay, bx, by] = pw.c;
-      rail.moveTo(ax, ay)
-        .lineTo(bx, by)
-        .stroke({ width: 3, color: PW_COLOR, alpha: 0.35, cap: "round" });
+      strokePath(rail, { width: 3, color: PW_COLOR, alpha: 0.35, cap: "round" }, (target) =>
+        target.moveTo(ax, ay).lineTo(bx, by));
       // Sample ticks: one small node per emitter point.
       for (const p of pts) {
-        rail.circle(p.x, p.y, 3)
-          .fill({ color: PW_COLOR, alpha: 0.8 });
+        fillCircle(rail, p.x, p.y, 3, { color: PW_COLOR, alpha: 0.8 });
       }
       // Endpoint handles.
       for (const [hx, hy] of [[ax, ay], [bx, by]]) {
-        rail.circle(hx, hy, 6)
-          .fill({ color: PW_COLOR, alpha: 0.9 })
-          .stroke({ width: 1, color: 0x0a0f14, alpha: 0.8 });
+        fillStrokeCircle(
+          rail, hx, hy, 6,
+          { color: PW_COLOR, alpha: 0.9 },
+          { width: 1, color: 0x0a0f14, alpha: 0.8 }
+        );
       }
       holder.addChild(rail);
 
@@ -122,9 +123,8 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
     this.preview = null;
     if (!at || !this._pending) return;
     const g = new PIXI.Graphics();
-    g.moveTo(this._pending.x, this._pending.y)
-      .lineTo(at.x, at.y)
-      .stroke({ width: 2, color: PW_COLOR, alpha: 0.6, cap: "round" });
+    strokePath(g, { width: 2, color: PW_COLOR, alpha: 0.6, cap: "round" }, (target) =>
+      target.moveTo(this._pending.x, this._pending.y).lineTo(at.x, at.y));
     this.preview = g;
     this.addChild(g);
   }

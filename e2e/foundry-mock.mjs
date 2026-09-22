@@ -242,7 +242,7 @@ globalThis.canvas = {
 
 // Stub PIXI for layer classes (not exercised visually in tests)
 globalThis.PIXI = {
-  VERSION: "8.0.0",
+  VERSION: "7.4.2",
   Container: class {
     constructor() {
       this.children = [];
@@ -269,9 +269,10 @@ globalThis.PIXI = {
     lineTo(x, y) { this.instructions.push(["lineTo", x, y]); return this; }
     closePath() { this.instructions.push(["closePath"]); return this; }
     arc(...args) { this.instructions.push(["arc", ...args]); return this; }
-    circle(...args) { this.instructions.push(["circle", ...args]); return this; }
-    fill(style) { this.instructions.push(["fill", style]); return this; }
-    stroke(style) { this.instructions.push(["stroke", style]); return this; }
+    lineStyle(...args) { this.instructions.push(["lineStyle", ...args]); return this; }
+    beginFill(...args) { this.instructions.push(["beginFill", ...args]); return this; }
+    drawCircle(...args) { this.instructions.push(["drawCircle", ...args]); return this; }
+    endFill() { this.instructions.push(["endFill"]); return this; }
     clear() { this.instructions = []; return this; }
     destroy() { this.destroyed = true; }
   },
@@ -299,7 +300,9 @@ globalThis.PIXI = {
 };
 canvas.stage = new PIXI.Container();
 canvas.stage.worldTransform = { applyInverse: (point) => ({ x: point.x, y: point.y }) };
+canvas.primary = { group: new PIXI.Container() };
 canvas.interface = new PIXI.Container();
+canvas.stage.addChild(canvas.primary.group);
 canvas.stage.addChild(canvas.interface);
 canvas.grid = { isGridless: false, isSquare: true, size: 100 };
 
