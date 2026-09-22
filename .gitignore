@@ -1,0 +1,4 @@
+node_modules/
+*.log
+.freebuff/
+e2e/node_modules/

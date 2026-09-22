@@ -1,0 +1,345 @@
+{{! Touch — Sonar GM Hub }}
+<div class="touch-hub-root">
+  <section class="touch-hub-global">
+    <h2><i class="fa-solid fa-water"></i> {{localize "TOUCH.Hub.BulkHeader"}}</h2>
+    <div class="touch-hub-global-grid">
+      <label>
+        <span>{{localize "TOUCH.Hub.Intensity"}}</span>
+        <input type="range" name="globalIntensity" min="0" max="100" value="{{globalIntensity}}">
+        <output>{{globalIntensity}}</output>
+      </label>
+      <label class="touch-switch">
+        <input type="checkbox" name="globalMuted" {{checked globalMuted}}>
+        <span>{{localize "TOUCH.Hub.Muted"}}</span>
+      </label>
+    </div>
+    <div class="touch-hub-bulk">
+      <input type="number" name="bulkIntensity" min="0" max="100" placeholder="0–100">
+      <button type="button" data-action="bulkIntensity">{{localize "TOUCH.Hub.ApplyBulk"}}</button>
+      <button type="button" data-action="muteAll">{{localize "TOUCH.Hub.MuteAll"}}</button>
+      <button type="button" data-action="unmuteAll">{{localize "TOUCH.Hub.UnmuteAll"}}</button>
+      <button type="button" data-action="pingAll"><i class="fa-solid fa-satellite-dish"></i> {{localize "TOUCH.Viewer.Scan"}}</button>
+      <button type="button" class="touch-quantum-btn touch-quantum-shimmer" data-action="openQuantum"
+              title="{{localize "TOUCH.Quantum.OpenHint"}}" aria-label="{{localize "TOUCH.Quantum.OpenHint"}}">
+        <span class="touch-quantum-glow"></span>
+        <span class="touch-quantum-cube">
+          {{#each quantumFaces}}
+            <span class="touch-quantum-face {{face}}" data-face="{{cam}}" title="{{label}}">{{glyph}}</span>
+          {{/each}}
+        </span>
+      </button>
+      <button type="button" data-action="reset"><i class="fa-solid fa-rotate-left"></i> {{localize "TOUCH.Hub.Reset"}}</button>
+    </div>
+    {{! Bulk verticals: apply one floor range / wall extent to selected kinds }}
+    <fieldset class="touch-hub-verts">
+      <legend>{{localize "TOUCH.Hub.BulkVertsHeader"}}</legend>
+      <div class="touch-verts-grid">
+        <label class="touch-verts-target">
+          <span>{{localize "TOUCH.Hub.BulkVertsTarget"}}</span>
+          <select name="bulkVertsModule">
+            <option value="levels" {{checked levelsOn}}>{{localize "TOUCH.Hub.BulkVertsLevels"}}</option>
+            <option value="wallHeight" {{checked wallHeightOn}}>{{localize "TOUCH.Hub.BulkVertsWH"}}</option>
+          </select>
+        </label>
+        <div class="touch-verts-kinds">
+          <span>{{localize "TOUCH.Hub.BulkVertsKinds"}}</span>
+          {{#each vertKinds}}
+            <label class="touch-switch touch-verts-kind" data-module="{{module}}">
+              <input type="checkbox" name="bulkVertKind" value="{{kind}}" data-module="{{module}}" {{checked on}}>
+              <span>{{label}}</span>
+            </label>
+          {{/each}}
+        </div>
+        <label>
+          <span>{{localize "TOUCH.Hub.BulkVertsBottom"}}</span>
+          <input type="number" step="any" name="bulkVertsBottom" placeholder="−∞">
+        </label>
+        <label>
+          <span>{{localize "TOUCH.Hub.BulkVertsTop"}}</span>
+          <input type="number" step="any" name="bulkVertsTop" placeholder="+∞">
+        </label>
+        <div class="touch-verts-actions">
+          <button type="button" data-action="bulkVerticalsApply"><i class="fa-solid fa-layer-group"></i> {{localize "TOUCH.Hub.BulkVertsApply"}}</button>
+          <button type="button" data-action="bulkVerticalsClear">{{localize "TOUCH.Hub.BulkVertsClear"}}</button>
+        </div>
+      </div>
+      <p class="touch-verts-hint" title="{{localize "TOUCH.Viewer.BandsHint"}}">{{localize "TOUCH.Hub.BulkVertsHint"}}</p>
+    </fieldset>
+    {{! 3D sonar lattice: every gridline a pathway, every crossing a node }}
+    <fieldset class="touch-hub-verts touch-hub-lattice">
+      <legend>{{localize "TOUCH.Lattice.Header"}}</legend>
+      <div class="touch-verts-grid">
+        <label>
+          <span>{{localize "TOUCH.Lattice.CellsW"}}</span>
+          <input type="number" name="latticeCellW" min="1" max="24" value="{{lattice.cellW}}">
+        </label>
+        <label>
+          <span>{{localize "TOUCH.Lattice.CellsD"}}</span>
+          <input type="number" name="latticeCellD" min="1" max="24" value="{{lattice.cellD}}">
+        </label>
+        <label>
+          <span>{{localize "TOUCH.Lattice.Storeys"}}</span>
+          <input type="number" name="latticeStoreys" min="1" max="6" value="{{lattice.storeys}}">
+        </label>
+        <label>
+          <span>{{localize "TOUCH.Hub.Intensity"}}</span>
+          <input type="number" name="latticeIntensity" min="0" max="100" value="{{lattice.intensity}}">
+        </label>
+        <div class="touch-verts-actions">
+          <button type="button" data-action="latticeGenerate"><i class="fa-solid fa-table-cells"></i> {{localize "TOUCH.Lattice.Generate"}}</button>
+          <button type="button" data-action="latticeClear">{{localize "TOUCH.Lattice.Clear"}}</button>
+        </div>
+      </div>
+      <p class="touch-verts-hint">{{localize "TOUCH.Lattice.Hint"}}</p>
+    </fieldset>
+    {{! Wave physics: interference, dissipation, wall reflections }}
+    <fieldset class="touch-hub-verts touch-hub-waves">
+      <legend>{{localize "TOUCH.Waves.Header"}}</legend>
+      <div class="touch-verts-grid">
+        <label class="touch-waves-toggle">
+          <input type="checkbox" name="wavePhysics" {{checked waves.enabled}}>
+          <span>{{localize "TOUCH.Waves.Enabled"}}</span>
+        </label>
+        <label class="touch-waves-toggle">
+          <input type="checkbox" name="waveReflections" {{checked waves.reflections}}>
+          <span>{{localize "TOUCH.Waves.Reflections"}}</span>
+        </label>
+        <label>
+          <span>{{localize "TOUCH.Waves.Speed"}}</span>
+          <input type="number" name="waveSpeed" min="50" max="2000" step="50" value="{{waves.speed}}">
+        </label>
+        <div class="touch-verts-actions">
+          <button type="button" data-action="wavesTest"><i class="fa-solid fa-water"></i> {{localize "TOUCH.Waves.Test"}}</button>
+        </div>
+      </div>
+      <p class="touch-verts-hint">{{localize "TOUCH.Waves.Hint"}}</p>
+    </fieldset>
+  </section>
+
+  <section class="touch-hub-objects">
+    <h2><i class="fa-solid fa-list"></i> {{localize "TOUCH.Hub.ObjectHeader"}} <span class="touch-count">({{count}})</span></h2>
+    {{#if emitters}}
+      <div class="touch-table" role="table">
+        <div class="touch-thead" role="row">
+          <span class="touch-td-name">{{localize "TOUCH.Hub.NameHeader"}}</span>
+          <span class="touch-td-type">{{localize "TOUCH.Hub.TypeHeader"}}</span>
+          <span class="touch-td-int">{{localize "TOUCH.Hub.IntensityHeader"}}</span>
+          <span class="touch-td-elev">{{localize "TOUCH.Hub.ElevationHeader"}}</span>
+          <span class="touch-td-levels">{{localize "TOUCH.Hub.LevelsHeader"}}</span>
+          <span class="touch-td-wh">{{localize "TOUCH.Hub.WallHeightHeader"}}</span>
+          <span class="touch-td-emission">{{localize "TOUCH.Hub.EmissionHeader"}}</span>
+          <span class="touch-td-rate">{{localize "TOUCH.Hub.RateHeader"}}</span>
+          <span class="touch-td-beat" title="{{localize "TOUCH.Hub.BeatHint"}}">♥ {{localize "TOUCH.Hub.BeatHeader"}}</span>
+          <span class="touch-td-remove"></span>
+          <span class="touch-td-mute">{{localize "TOUCH.Hub.MuteHeader"}}</span>
+          <span class="touch-td-goto">{{localize "TOUCH.Hub.GotoHeader"}}</span>
+        </div>
+        {{#each emitters}}
+          <div class="touch-row" role="row" data-id="{{id}}" data-kind="{{kind}}"
+               {{#if pathwayId}}data-pathway-id="{{pathwayId}}"{{/if}}>
+            <span class="touch-td-name" title="{{name}}">{{name}}
+              {{#if identity}}<span class="touch-identity-chip" title="{{localize "TOUCH.Identity.ChipHint"}}">{{identity}}</span>{{/if}}
+            </span>
+            <span class="touch-td-type">
+              {{#if isWaypoint}}
+                <input class="touch-wp-name" type="text" value="{{name}}" title="{{localize "TOUCH.Hub.WaypointRename"}}">
+              {{else if isPathway}}
+                <input class="touch-pw-name" type="text" value="{{name}}" title="{{localize "TOUCH.Pathway.Rename"}}">
+              {{else}}
+                <i class="{{kindIcon kind}}"></i> {{kindLabel}}
+              {{/if}}
+            </span>
+            <span class="touch-td-int">
+              <input class="touch-intensity" type="range" min="{{../min}}" max="{{../max}}" value="{{intensity}}">
+              <span class="touch-intensity-value">{{intensity}}</span>
+            </span>
+            <span class="touch-td-elev">
+              {{#if isWaypoint}}
+                <input class="touch-wp-elev" type="number" step="0.1" value="{{elevation}}"
+                       title="{{localize "TOUCH.Hub.Elevation"}} ({{localize "TOUCH.Hub.ElevationUnit"}})">
+              {{else if isPathway}}
+                <input class="touch-pw-elev" type="number" step="0.1" value="{{elevation}}"
+                       title="{{localize "TOUCH.Hub.Elevation"}} ({{localize "TOUCH.Hub.ElevationUnit"}})">
+                <input class="touch-pw-spacing" type="number" min="1" step="1" value="{{spacing}}"
+                       title="{{localize "TOUCH.Pathway.SpacingHint"}}">
+              {{else}}
+                <input class="touch-elev" type="number" step="0.1" value="{{elevation}}"
+                       title="{{localize "TOUCH.Hub.Elevation"}} ({{localize "TOUCH.Hub.ElevationUnit"}})">
+              {{/if}}
+            </span>
+            {{#if canLevel}}
+              <span class="touch-td-levels" title="{{localize "TOUCH.Hub.LevelsRange"}}">
+                <input class="touch-level" data-bound="bottom" type="number" step="1"
+                       placeholder="−∞" value="{{#unless (eq levelsRange.bottom null)}}{{levelsRange.bottom}}{{/unless}}">
+                <span class="touch-levels-sep">–</span>
+                <input class="touch-level" data-bound="top" type="number" step="1"
+                       placeholder="+∞" value="{{#unless (eq levelsRange.top null)}}{{levelsRange.top}}{{/unless}}">
+              </span>
+            {{else}}
+              <span class="touch-td-levels touch-td-levels-empty">—</span>
+            {{/if}}
+            {{#if canWallHeight}}
+              <span class="touch-td-wh" title="{{localize "TOUCH.Hub.WallHeightRange"}}">
+                <input class="touch-wall-height" data-bound="bottom" type="number" step="1"
+                       placeholder="−∞" value="{{#unless (eq wallHeightRange.bottom null)}}{{wallHeightRange.bottom}}{{/unless}}">
+                <span class="touch-levels-sep">–</span>
+                <input class="touch-wall-height" data-bound="top" type="number" step="1"
+                       placeholder="+∞" value="{{#unless (eq wallHeightRange.top null)}}{{wallHeightRange.top}}{{/unless}}">
+              </span>
+            {{else}}
+              <span class="touch-td-wh touch-td-levels-empty">—</span>
+            {{/if}}
+            <span class="touch-td-emission">
+              <select class="touch-mode" title="{{localize "TOUCH.Hub.ModeHint"}}">
+                <option value="both" {{#if (eq mode "both")}}selected{{/if}}>{{localize "TOUCH.Hub.ModeBoth"}}</option>
+                <option value="sound" {{#if (eq mode "sound")}}selected{{/if}}>{{localize "TOUCH.Hub.ModeSound"}}</option>
+                <option value="light" {{#if (eq mode "light")}}selected{{/if}}>{{localize "TOUCH.Hub.ModeLight"}}</option>
+              </select>
+              {{#unless isPathway}}
+                <input class="touch-angle" type="number" min="0" max="359" value="{{angle}}"
+                       title="{{localize "TOUCH.Hub.FacingHint"}}">
+                <input class="touch-fov" type="number" min="5" max="360" value="{{fov}}"
+                       title="{{localize "TOUCH.Hub.FovHint"}}">
+              {{/unless}}
+            </span>
+            <span class="touch-td-rate">
+              <input class="touch-rate" type="number" min="0" max="60" step="1" value="{{rate}}"
+                     title="{{localize "TOUCH.Hub.RateHint"}}">
+              <select class="touch-tone" title="{{localize "TOUCH.Hub.ToneHint"}}">
+                {{#each tones}}
+                  <option value="{{this}}" {{#if (eq ../tone this)}}selected{{/if}}>{{localize (concat "TOUCH.Hub.Tone." (capitalize this))}}</option>
+                {{/each}}
+              </select>
+            </span>
+            {{#if isWaypoint}}
+              <span class="touch-td-remove">
+                <button type="button" class="touch-wp-remove" data-action="removeWaypoint"
+                        title="{{localize "TOUCH.Hub.WaypointRemove"}}">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </span>
+            {{else if isPathway}}
+              <span class="touch-td-remove">
+                <button type="button" class="touch-pw-remove" data-action="removePathway"
+                        title="{{localize "TOUCH.Pathway.Remove"}}">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </span>
+            {{else}}
+              <span class="touch-td-remove"></span>
+            {{/if}}
+            <span class="touch-td-mute">
+              <button type="button" class="touch-mute {{#if muted}}active{{/if}}" title="{{localize "TOUCH.Hub.Muted"}}">
+                <i class="fa-solid {{#if muted}}fa-volume-xmark{{else}}fa-volume-high{{/if}}"></i>
+              </button>
+              {{#if identity}}
+                <button type="button" class="touch-id-recapture" data-action="identityRecapture"
+                        title="{{localize "TOUCH.Identity.RecaptureHint"}}">
+                  <i class="fa-solid fa-camera-rotate"></i>
+                </button>
+                <button type="button" class="touch-id-revoke" data-action="identityRevoke"
+                        title="{{localize "TOUCH.Identity.RevokeHint"}}">
+                  <i class="fa-solid fa-id-card"></i>
+                </button>
+              {{else}}
+                <button type="button" class="touch-id-assign" data-action="identityAssign"
+                        title="{{localize "TOUCH.Identity.AssignHint"}}">
+                  <i class="fa-solid fa-id-card"></i>
+                </button>
+              {{/if}}
+            </span>
+            <span class="touch-td-goto">
+              <button type="button" class="touch-goto" data-action="goto" title="{{localize "TOUCH.Hub.Goto"}}">
+                <i class="fa-solid fa-crosshairs"></i>
+              </button>
+            </span>
+            <span class="touch-td-beat" data-beat-id="{{id}}"><span class="touch-beat-value">{{beat}}</span></span>
+          </div>
+        {{/each}}
+      </div>
+    {{else}}
+      <p class="touch-empty">{{localize "TOUCH.Viewer.NoPings"}}</p>
+    {{/if}}
+  </section>
+
+  {{! Corner heartbeat monitors: the lattice grid's pulse points }}
+  <section class="touch-hub-monitors">
+    <h2><i class="fa-solid fa-heart-pulse"></i> {{localize "TOUCH.Lattice.MonitorsHeader"}} <span class="touch-count">({{monitors.count}})</span></h2>
+    <div class="touch-verts-actions">
+      <button type="button" data-action="monitorsDeploy"><i class="fa-solid fa-heart-circle-plus"></i> {{localize "TOUCH.Lattice.MonitorsDeploy"}}</button>
+      <button type="button" data-action="monitorsClear">{{localize "TOUCH.Lattice.MonitorsClear"}}</button>
+    </div>
+    <p class="touch-verts-hint">{{localize "TOUCH.Lattice.MonitorsHint"}}</p>
+  </section>
+
+  {{! Persistent node memory: what the sonar remembers at every coordinate }}
+  <section class="touch-hub-memory">
+    <h2><i class="fa-solid fa-brain"></i> {{localize "TOUCH.Memory.Header"}} <span class="touch-count">({{memory.count}})</span></h2>
+    <div class="touch-verts-grid">
+      <label>
+        <span>{{localize "TOUCH.Memory.Retention"}}</span>
+        <input type="number" name="memoryRetention" min="0" step="60" value="{{memory.retention}}"
+               title="{{localize "TOUCH.Settings.MemoryRetentionHint"}}">
+      </label>
+      <div class="touch-verts-actions">
+        <button type="button" data-action="memoryClear"><i class="fa-solid fa-eraser"></i> {{localize "TOUCH.Memory.Clear"}}</button>
+      </div>
+    </div>
+    {{#if memory.tracks.length}}
+      <div class="touch-track-list">
+        {{#each memory.tracks}}
+          <span class="touch-track-chip {{#if assigned}}touch-track-assigned{{/if}} {{#if groupId}}touch-track-grouped{{/if}}"
+                title="{{id}} · {{cells}} cells · {{points}} fixes{{#if assigned}} · {{localize "TOUCH.Identity.AssignedMark"}}{{/if}}{{#if groupId}} · {{localize "TOUCH.Groups.MemberHint"}}{{/if}}">
+            {{label}} · {{points}} Fixes{{#if assigned}} · 🪪{{/if}}{{#if groupId}} · ⬌{{/if}}
+          </span>
+        {{/each}}
+      </div>
+    {{/if}}
+    {{#if memory.groups.length}}
+      <div class="touch-group-list">
+        {{#each memory.groups}}
+          <div class="touch-group-item" data-group-id="{{id}}">
+            <span class="touch-group-chip"
+                  title="{{names}} · {{localize "TOUCH.Groups.VectorHint"}}: {{speed}}u/s @ {{heading}}°">
+              <i class="fa-solid fa-people-group"></i> {{label}} ×{{count}}
+              <button type="button" class="touch-group-dissolve" data-action="groupDissolve"
+                      title="{{localize "TOUCH.Groups.DissolveHint"}}">✕</button>
+            </span>
+            {{#if timeline.length}}
+              <div class="touch-group-timeline" title="{{localize "TOUCH.Groups.TimelineHint"}}">
+                {{#each timeline}}
+                  <span class="touch-timeline-event touch-timeline-{{event}}" data-when="{{t}}">
+                    {{#if (eq event "joined")}}↳{{else if (eq event "left")}}↲{{else if (eq event "formed")}}★{{else}}✕{{/if}}
+                    {{label}}
+                  </span>
+                {{/each}}
+              </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      </div>
+    {{/if}}
+    <p class="touch-verts-hint">{{localize "TOUCH.Memory.Hint"}}</p>
+  </section>
+
+  <section class="touch-hub-settings">
+    <h2><i class="fa-solid fa-gear"></i> {{localize "TOUCH.Settings.Title"}}</h2>
+    <p class="touch-hint">{{localize "TOUCH.Hub.SettingsNote"}}</p>
+    <label>{{localize "TOUCH.Settings.PingIntervalName"}}
+      <input type="number" name="pingInterval" value="{{settings.pingInterval}}" min="1" max="60" step="0.5">
+    </label>
+    <label>{{localize "TOUCH.Settings.PingDurationName"}}
+      <input type="number" name="pingDuration" value="{{settings.pingDuration}}" min="1" max="30" step="0.5">
+    </label>
+    <label>{{localize "TOUCH.Settings.MaxRingsName"}}
+      <input type="number" name="maxRings" value="{{settings.maxRings}}" min="1" max="10">
+    </label>
+    <label>{{localize "TOUCH.Settings.EchoAttenuationName"}}
+      <input type="number" name="echoAttenuation" value="{{settings.echoAttenuation}}" min="0" max="1" step="0.05">
+    </label>
+    <label class="touch-switch">
+      <input type="checkbox" name="showRingSprites" {{checked settings.showRingSprites}}>
+      <span>{{localize "TOUCH.Settings.ShowRingSpritesName"}}</span>
+    </label>
+  </section>
+</div>
