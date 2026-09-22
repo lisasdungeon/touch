@@ -218,6 +218,29 @@ check("calibrate clears frames and filter", () => {
   assert.strictEqual(v.frames.size, 0, "frame maps cleared (no camera keys)");
 });
 
+// ---------------------------------------------------------- scene controls
+console.log("== Scene controls ==");
+check("Touch scene control group with GM hub button", () => {
+  const controls = [];
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+  const group = controls.find((c) => c.name === "touch");
+  assert.ok(group, "top-level Touch control group registered");
+  assert.ok(group.tools.some((t) => t.name === "touch-hub"), "hub button present");
+  assert.ok(group.tools.some((t) => t.name === "touch-viewer"), "viewer button present");
+  assert.ok(group.tools.some((t) => t.name === "touch-waypoint"), "waypoint button present");
+  assert.ok(group.tools.some((t) => t.name === "touch-pathway"), "pathway button present");
+  const hub = group.tools.find((t) => t.name === "touch-hub");
+  assert.strictEqual(hub.button, true, "hub is an action button, not a toggle tool");
+});
+
+await checkAsync("hub button click opens the GM hub", async () => {
+  const controls = [];
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+  const hub = controls.find((c) => c.name === "touch").tools.find((t) => t.name === "touch-hub");
+  await hub.onClick();
+  assert.ok(window.touch.hub?.rendered, "hub rendered via control click");
+});
+
 // ------------------------------------------------------------------ summary
 const failed = results.filter(([s]) => s === "FAIL");
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

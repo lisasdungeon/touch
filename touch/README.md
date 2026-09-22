@@ -15,6 +15,10 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   (sound / light / both), **facing cone** (angle + field of view), **ping
   frequency** (its own seconds-per-ping, 0 = follow the global pulse) and
   **feedback tone** (low / mid / high); nothing about your system is required.
+- **Scene controls** — Touch installs its own top-level control group
+  (broadcast-tower icon, reachable with the **T** hotkey cycle) holding the
+  **Sonar Viewer**, the **Sonar GM Hub** (GM only), and the Waypoint and
+  Pathway placement tools. The hub is one click away, no macro needed.
 - **Deployable waypoints** — hit the Waypoint tool (or `window.touch.armWaypointDeploy()`)
   and click the scene to drop a free-standing sonar emitter. Drag to move,
   set its height, aim its cone, choose what it emits, and delete it from the

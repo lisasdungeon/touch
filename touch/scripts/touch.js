@@ -171,40 +171,47 @@ Hooks.once("init", () => {
   register("globalMuted", { scope: "world", config: false, type: Boolean, default: false });
 
   // ----------------------------------------------------------- scene controls
+  // Dedicated top-level Touch control group: the sonar tools live in their
+  // own palette ("T" hotkey cycles to it) instead of hiding inside token tools.
   Hooks.on("getSceneControlButtons", (controls) => {
-    const token = controls.find((c) => c.name === "token");
-    if (token) {
-      token.tools.push({
-        name: "touch-viewer",
-        title: "TOUCH.Controls.Viewer",
-        icon: "fa-solid fa-tower-broadcast",
-        button: true,
-        onClick: () => window.touch?.openViewer(),
-      });
-  token.tools.push({
-    name: "touch-waypoint",
-    title: "TOUCH.Controls.Waypoint",
-    icon: "fa-solid fa-location-dot",
-    button: true,
-    onClick: () => window.touch?.armWaypointDeploy(),
-  });
-  token.tools.push({
-    name: "touch-pathway",
-    title: "TOUCH.Controls.Pathway",
-    icon: "fa-solid fa-route",
-    button: true,
-    onClick: () => window.touch?.armPathwayDraw(),
-  });
-      if (game.user.isGM) {
-        token.tools.push({
+    controls.push({
+      name: "touch",
+      title: "TOUCH.Controls.Touch",
+      layer: "touchRings",
+      icon: "fa-solid fa-tower-broadcast",
+      visible: true,
+      tools: [
+        {
+          name: "touch-viewer",
+          title: "TOUCH.Controls.Viewer",
+          icon: "fa-solid fa-display",
+          button: true,
+          onClick: () => window.touch?.openViewer(),
+        },
+        {
           name: "touch-hub",
           title: "TOUCH.Controls.Hub",
           icon: "fa-solid fa-sliders",
           button: true,
+          visible: game.user.isGM,
           onClick: () => window.touch?.openHub(),
-        });
-      }
-    }
+        },
+        {
+          name: "touch-waypoint",
+          title: "TOUCH.Controls.Waypoint",
+          icon: "fa-solid fa-location-dot",
+          button: true,
+          onClick: () => window.touch?.armWaypointDeploy(),
+        },
+        {
+          name: "touch-pathway",
+          title: "TOUCH.Controls.Pathway",
+          icon: "fa-solid fa-route",
+          button: true,
+          onClick: () => window.touch?.armPathwayDraw(),
+        },
+      ],
+    });
   });
 
   // -------------------------------------------------------------- socket

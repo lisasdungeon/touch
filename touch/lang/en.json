@@ -2,6 +2,7 @@
   "TOUCH": {
     "ModuleTitle": "Touch — Sonar Scene Reconstruction",
     "Controls": {
+      "Touch": "Touch — Sonar Scene Reconstruction",
       "Layer": "Sonar",
       "Viewer": "Open Sonar Viewer",
       "Hub": "Sonar GM Hub",
