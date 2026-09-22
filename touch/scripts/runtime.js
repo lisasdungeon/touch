@@ -176,10 +176,20 @@ export function registerRuntime(loadViewerClass, loadHubClass) {
       canvas.touchWaypoints?.refreshWaypoints();
       touch.hub?.render();
     };
-    touch.armWaypointDeploy = () => canvas.touchWaypoints?.setArmed(true);
-    touch.disarmWaypointDeploy = () => canvas.touchWaypoints?.setArmed(false);
-    touch.armPathwayDraw = () => canvas.touchPathways?.setArmed(true);
-    touch.disarmPathwayDraw = () => canvas.touchPathways?.setArmed(false);
+    const setPlacementMode = (layerName, active, label) => {
+      const layer = canvas?.[layerName];
+      if (!layer) {
+        if (active) ui.notifications?.error(`Touch | ${label} layer is unavailable. Reload the world after updating Touch.`);
+        return false;
+      }
+      return layer.setArmed(active);
+    };
+    touch.setWaypointDeploy = (active) => setPlacementMode("touchWaypoints", active, "Waypoint");
+    touch.armWaypointDeploy = () => touch.setWaypointDeploy(true);
+    touch.disarmWaypointDeploy = () => touch.setWaypointDeploy(false);
+    touch.setPathwayDraw = (active) => setPlacementMode("touchPathways", active, "Pathway");
+    touch.armPathwayDraw = () => touch.setPathwayDraw(true);
+    touch.disarmPathwayDraw = () => touch.setPathwayDraw(false);
 
     touch.renamePathway = async (id, name) => { await updatePathway(canvas.scene, id, { name }); touch.hub?.render(); };
     touch.setPathwayElevation = async (id, elevation) => {

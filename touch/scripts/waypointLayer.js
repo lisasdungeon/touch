@@ -25,12 +25,14 @@ export class WaypointLayer extends foundry.canvas.layers.CanvasLayer {
 
   get armed() { return this._armed; }
 
-  setArmed(v) {
-    this._armed = v;
-    if (v) this.activate();
-    ui.notifications?.info(
-      v ? "Touch | Click the scene to deploy a waypoint" : "Touch | Waypoint deploy disarmed"
+  setArmed(value, { notify = true } = {}) {
+    this._armed = Boolean(value);
+    if (this._armed && canvas.touchPathways?.armed) canvas.touchPathways.setArmed(false, { notify: false });
+    if (canvas.stage) canvas.stage.cursor = (canvas.touchWaypoints?.armed || canvas.touchPathways?.armed) ? "crosshair" : "default";
+    if (notify) ui.notifications?.info(
+      this._armed ? "Touch | Click the scene to deploy a waypoint" : "Touch | Waypoint deploy disarmed"
     );
+    return this._armed;
   }
 
   /** @override */

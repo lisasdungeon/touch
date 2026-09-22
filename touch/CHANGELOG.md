@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.6 — 2026-09-21
+
+- Made Waypoint and Pathway scene controls persistent placement modes and
+  routed live canvas clicks through stable stage coordinates.
+- Registered every live scene layer during Foundry's `init` lifecycle so the
+  waypoint, pathway, room, and zone overlays are instantiated with the canvas.
+- Added an alphabetic-column/numeric-row scene address system with cell ids
+  such as `1A`, continuing past `Z` to `AA`.
+- Added ten static 10-foot level planes and twenty static five-foot cube tiers,
+  forming a labeled 100-foot vertical room directly over the scene grid.
+- Added zone, level, and cube addresses to every player-visible token ping while
+  preserving the visibility boundary for GM-hidden tokens.
+- Removed paint containment that clipped the fixed CSS room in the Sonar Viewer.
+
 ## 0.1.5 — 2026-09-21
 
 - Registered the Touch scene-control group during Foundry's `init` hook so the

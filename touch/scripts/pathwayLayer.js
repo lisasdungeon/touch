@@ -26,12 +26,14 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
 
   get armed() { return this._armed; }
 
-  setArmed(v) {
-    this._armed = v;
-    if (v) this.activate();
-    ui.notifications?.info(
-      v ? "Touch | Click two points to draw a sonar pathway" : "Touch | Pathway drawing disarmed"
+  setArmed(value, { notify = true } = {}) {
+    this._armed = Boolean(value);
+    if (this._armed && canvas.touchWaypoints?.armed) canvas.touchWaypoints.setArmed(false, { notify: false });
+    if (canvas.stage) canvas.stage.cursor = (canvas.touchWaypoints?.armed || canvas.touchPathways?.armed) ? "crosshair" : "default";
+    if (notify) ui.notifications?.info(
+      this._armed ? "Touch | Click two points to draw a sonar pathway" : "Touch | Pathway drawing disarmed"
     );
+    return this._armed;
   }
 
   /** @override */

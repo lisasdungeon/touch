@@ -31,10 +31,40 @@ async function checkAsync(name, fn) {
 console.log("== Loading module ==");
 await import("../touch/scripts/touch.js");
 for (const fn of Hooks.events.init ?? []) fn();
+assert.strictEqual(CONFIG.Canvas.layers.touchWaypoints?.group, "interface", "waypoint layer registered during init");
+await setupCanvasLayers();
 for (const fn of Hooks.events.ready ?? []) fn();
+for (const fn of Hooks.events.canvasReady ?? []) fn();
 await window.touch.openViewer(); // frames need a rendered viewer to ingest into
 
 const wpMod = await import("../touch/scripts/waypoints.js");
+
+await checkAsync("waypoint tool arms, consumes a map click, and draws the stored waypoint", async () => {
+  const controls = {};
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+  const tool = controls.touch.tools["touch-waypoint"];
+  assert.strictEqual(tool.button, false, "placement mode is not a one-shot button");
+  assert.strictEqual(tool.toggle, true, "placement mode remains visibly armed");
+  await tool.onChange({}, true);
+  assert.strictEqual(canvas.touchWaypoints.armed, true, "waypoint layer armed");
+  assert.strictEqual(canvas.stage.cursor, "crosshair", "scene cursor signals placement mode");
+  assert.strictEqual(canvas.stage.listenerCount("pointerdown"), 1, "one scene placement listener bound");
+  let stopped = false;
+  await canvas.stage.emit("pointerdown", {
+    button: 0,
+    getLocalPosition: () => ({ x: 640, y: 420 }),
+    stopPropagation: () => { stopped = true; },
+  });
+  const placed = wpMod.getWaypoints(sampleScene).find((waypoint) => waypoint.x === 640 && waypoint.y === 420);
+  assert.ok(placed, "scene click persisted a waypoint at the canvas coordinate");
+  assert.strictEqual(placed.config.mode, "both", "new waypoint exposes a configurable ping mode");
+  assert.strictEqual(canvas.touchWaypoints.waypoints.children.length, 1, "placed waypoint has a live scene marker");
+  assert.strictEqual(stopped, true, "placement click does not leak into other canvas tools");
+  await tool.onChange({}, false);
+  assert.strictEqual(canvas.touchWaypoints.armed, false, "toolbar deactivation disarms placement");
+  await wpMod.removeWaypoint(sampleScene, placed.id);
+  canvas.touchWaypoints.refreshWaypoints();
+});
 
 // ------------------------------------------------------------- waypoint CRUD
 console.log("== Waypoint deploy & storage ==");

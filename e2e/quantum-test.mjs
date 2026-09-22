@@ -48,6 +48,11 @@ await check("CSS defines wireframe cubes and corner waypoints without WebGL or o
   assert.doesNotMatch(hyperCss, /canvas|webgl|rotate.*animation/i);
 });
 
+await check("the zero-size 3D root does not paint-clip its transformed room", async () => {
+  const rootRule = hyperCss.match(/\.touch-hypergrid-space\s*\{[^}]+\}/s)?.[0] ?? "";
+  assert.doesNotMatch(rootRule, /contain:[^;]*paint/, "paint containment clips the 3D children");
+});
+
 console.log("== Scene and viewer surfaces ==");
 await check("the fixed wireframe lattice is a live Foundry canvas layer", async () => {
   assert.ok(canvas.touchHypergrid, "registered scene layer");

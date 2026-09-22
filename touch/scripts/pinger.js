@@ -6,6 +6,7 @@
 import { MODULE_ID, SOCKET_NAME, SOCKET_MESSAGES, DEFAULTS } from "./constants.js";
 import { collectEmitters } from "./emitters.js";
 import { getLevelsRange, getWallHeightRange } from "./elevation.js";
+import { zoneAddress } from "./zoneGridLayer.js";
 
 export class Pinger {
   constructor(socket) {
@@ -52,6 +53,7 @@ export class Pinger {
         }
         tick();
       }, 1000);
+      this.timer.unref?.();
     };
     tick();
   }
@@ -192,6 +194,8 @@ export class Pinger {
     const whRange = getWallHeightRange(emitter.doc);
     const hasLevels = lvRange.bottom !== null || lvRange.top !== null;
     const lv = hasLevels ? lvRange : whRange;
+    const elevation = emitter.elevation ?? 0;
+    const addressElevation = lv.bottom ?? elevation;
     return {
       uid: `${emitter.id}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
       id: emitter.id,
@@ -199,7 +203,8 @@ export class Pinger {
       name: emitter.name,
       x: emitter.x,
       y: emitter.y,
-      elevation: emitter.elevation ?? 0,
+      elevation,
+      address: zoneAddress(emitter.x, emitter.y, addressElevation),
       levels: {
         bottom: lv.bottom ?? null,
         top: lv.top ?? null,

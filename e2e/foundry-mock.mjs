@@ -23,6 +23,11 @@ globalThis.HTMLElement = window.HTMLElement;
 globalThis.Element = window.Element;
 globalThis.CustomEvent = window.CustomEvent;
 globalThis.performance = window.performance ?? globalThis.performance;
+window.HTMLCanvasElement.prototype.getContext = () => ({
+  scale() {}, strokeText() {}, fillText() {},
+  textAlign: "center", textBaseline: "middle", lineJoin: "round",
+  globalAlpha: 1, font: "", lineWidth: 1, strokeStyle: "", fillStyle: "",
+});
 
 // ------------------------------------------------------------ localization
 const LANG = JSON.parse(fs.readFileSync(path.join(MODULE_ROOT, "lang", "en.json"), "utf8"));
@@ -237,12 +242,16 @@ globalThis.canvas = {
 
 // Stub PIXI for layer classes (not exercised visually in tests)
 globalThis.PIXI = {
+  VERSION: "8.0.0",
   Container: class {
-    constructor() { this.children = []; this.position = { set() {} }; this.destroyed = false; this.eventMode = "auto"; this.cursor = ""; this.hitArea = null; }
+    constructor() { this.children = []; this.position = { set() {} }; this.destroyed = false; this.eventMode = "auto"; this.cursor = ""; this.hitArea = null; this.listeners = new Map(); }
     addChild(c) { this.children.push(c); return c; }
     removeChildren() { const c = this.children; this.children = []; return c; }
     destroy() { this.destroyed = true; this.children = []; }
-    on() { return this; } off() { return this; }
+    on(name, fn) { const listeners = this.listeners.get(name) ?? []; listeners.push(fn); this.listeners.set(name, listeners); return this; }
+    off(name, fn) { this.listeners.set(name, (this.listeners.get(name) ?? []).filter((listener) => listener !== fn)); return this; }
+    async emit(name, ...args) { return Promise.all((this.listeners.get(name) ?? []).map((listener) => listener(...args))); }
+    listenerCount(name) { return (this.listeners.get(name) ?? []).length; }
   },
   Graphics: class {
     constructor() { this.instructions = []; this.position = { set() {} }; this.destroyed = false; }
@@ -250,8 +259,31 @@ globalThis.PIXI = {
     arc() { return this; } circle() { return this; } fill() { return this; } stroke() { return this; }
     destroy() { this.destroyed = true; }
   },
+  Text: class {
+    constructor(options, style) {
+      this.text = typeof options === "object" ? options.text : options;
+      this.style = typeof options === "object" ? options.style : style;
+      this.anchor = { set() {} };
+      this.position = { set: (x, y) => { this.x = x; this.y = y; } };
+      this.eventMode = "auto";
+      this.destroyed = false;
+    }
+    destroy() { this.destroyed = true; }
+  },
+  Texture: { from: (source) => ({ source, destroyed: false, destroy() { this.destroyed = true; } }) },
+  Sprite: class {
+    constructor(texture) {
+      this.texture = texture;
+      this.position = { set: (x, y) => { this.x = x; this.y = y; } };
+      this.width = 0; this.height = 0; this.alpha = 1; this.eventMode = "auto"; this.destroyed = false;
+    }
+    destroy() { this.destroyed = true; }
+  },
   Rectangle: class { constructor(x, y, w, h) { this.x = x; this.y = y; this.width = w; this.height = h; } },
 };
+canvas.stage = new PIXI.Container();
+canvas.stage.worldTransform = { applyInverse: (point) => ({ x: point.x, y: point.y }) };
+canvas.grid = { isGridless: false, isSquare: true, size: 100 };
 
 globalThis.Hooks = {
   events: {},
@@ -330,7 +362,6 @@ globalThis.foundry = {
     layers: {
       CanvasLayer: class extends PIXI.Container {
         static get layerOptions() { return {}; }
-        activate() { return this; }
         async _draw() {}
         async draw() { await this._draw(); return this; }
       },
@@ -408,7 +439,7 @@ WallHeightSim.registerHooks();
 
 /** Instantiate the Touch canvas layers the module registered (test helper). */
 globalThis.setupCanvasLayers = async () => {
-  for (const key of ["touchWaypoints", "touchPathways", "touchHypergrid"]) {
+  for (const key of ["touchWaypoints", "touchPathways", "touchHypergrid", "touchZones"]) {
     const entry = CONFIG.Canvas.layers?.[key];
     if (entry?.layerClass && !canvas[key]) {
       canvas[key] = new entry.layerClass();

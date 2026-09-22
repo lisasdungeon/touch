@@ -15,7 +15,7 @@
   top: 52%;
   width: 0;
   height: 0;
-  contain: layout paint style;
+  contain: layout style;
   transform: rotateX(-25deg) rotateY(38deg);
   transform-style: preserve-3d;
 }
