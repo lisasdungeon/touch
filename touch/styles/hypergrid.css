@@ -14,14 +14,32 @@
   overflow: visible;
 }
 
-.touch-hyper-lattice {
+.touch-hyper-voxel-face {
+  stroke: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.touch-hyper-voxel-top {
+  fill: rgb(94 234 212 / 9%);
+}
+
+.touch-hyper-voxel-front {
+  fill: rgb(45 212 191 / 5%);
+}
+
+.touch-hyper-voxel-side {
+  fill: rgb(134 162 255 / 6%);
+}
+
+.touch-hyper-voxel-edges {
   fill: none;
   stroke: #5eead4;
-  stroke-width: 0.72;
+  stroke-width: 0.44;
   stroke-linecap: round;
-  opacity: 0.62;
+  stroke-linejoin: round;
+  opacity: 0.72;
   vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 1.5px rgb(94 234 212 / 55%));
+  filter: drop-shadow(0 0 1px rgb(94 234 212 / 48%));
 }
 
 .touch-hyper-markers {

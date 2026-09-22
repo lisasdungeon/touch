@@ -11,8 +11,10 @@ export const PHYSICAL_WAYPOINT_COUNT = WAYPOINT_AXIS ** 3;
 export const HYPERCELL_COUNT = GRID_AXIS ** 4;
 export const HYPERWAYPOINT_COUNT = PHYSICAL_WAYPOINT_COUNT * GRID_AXIS;
 export const LATTICE_SEGMENT_COUNT = 3 * WAYPOINT_AXIS ** 2;
+export const VOXEL_EDGE_COUNT = PHYSICAL_CUBE_COUNT * 12;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const VOXEL_GAP = 0.08;
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -72,24 +74,72 @@ function project(x, y, z) {
   };
 }
 
-function segment(x1, y1, z1, x2, y2, z2) {
-  const start = project(x1, y1, z1);
-  const end = project(x2, y2, z2);
-  return `M${start.x},${start.y}L${end.x},${end.y}`;
+function pathPoint(point) {
+  return `${Number(point.x.toFixed(2))},${Number(point.y.toFixed(2))}`;
 }
 
-function latticePath() {
-  const lines = [];
-  for (let y = 0; y <= GRID_AXIS; y++) {
-    for (let z = 0; z <= GRID_AXIS; z++) lines.push(segment(0, y, z, GRID_AXIS, y, z));
+function polygon(points) {
+  return `M${points.map(pathPoint).join("L")}Z`;
+}
+
+function edges(points, pairs) {
+  return pairs.map(([from, to]) => `M${pathPoint(points[from])}L${pathPoint(points[to])}`).join("");
+}
+
+function cubePoints(x, y, z) {
+  const low = VOXEL_GAP;
+  const high = 1 - VOXEL_GAP;
+  return [
+    project(x + low, y + low, z + low),
+    project(x + high, y + low, z + low),
+    project(x + low, y + high, z + low),
+    project(x + high, y + high, z + low),
+    project(x + low, y + low, z + high),
+    project(x + high, y + low, z + high),
+    project(x + low, y + high, z + high),
+    project(x + high, y + high, z + high),
+  ];
+}
+
+function voxelTier(y) {
+  const top = [];
+  const front = [];
+  const side = [];
+  const wire = [];
+  const pairs = [
+    [0, 1], [0, 2], [0, 4], [7, 3], [7, 5], [7, 6],
+    [1, 3], [1, 5], [2, 3], [2, 6], [4, 5], [4, 6],
+  ];
+  for (let z = 0; z < GRID_AXIS; z++) {
+    for (let x = 0; x < GRID_AXIS; x++) {
+      const points = cubePoints(x, y, z);
+      top.push(polygon([points[2], points[3], points[7], points[6]]));
+      front.push(polygon([points[0], points[1], points[3], points[2]]));
+      side.push(polygon([points[1], points[5], points[7], points[3]]));
+      wire.push(edges(points, pairs));
+    }
   }
-  for (let x = 0; x <= GRID_AXIS; x++) {
-    for (let z = 0; z <= GRID_AXIS; z++) lines.push(segment(x, 0, z, x, GRID_AXIS, z));
+  return { top: top.join(""), front: front.join(""), side: side.join(""), wire: wire.join("") };
+}
+
+function buildVoxels() {
+  const voxels = svgNode("g", { class: "touch-hyper-voxels" });
+  for (let y = 0; y < GRID_AXIS; y++) {
+    const paths = voxelTier(y);
+    const tier = svgNode("g", {
+      class: "touch-hyper-voxel-tier",
+      "data-tier": y + 1,
+      "data-cubes": GRID_AXIS ** 2,
+    });
+    tier.append(
+      svgNode("path", { class: "touch-hyper-voxel-face touch-hyper-voxel-top", d: paths.top }),
+      svgNode("path", { class: "touch-hyper-voxel-face touch-hyper-voxel-front", d: paths.front }),
+      svgNode("path", { class: "touch-hyper-voxel-face touch-hyper-voxel-side", d: paths.side }),
+      svgNode("path", { class: "touch-hyper-voxel-edges", d: paths.wire })
+    );
+    voxels.appendChild(tier);
   }
-  for (let x = 0; x <= GRID_AXIS; x++) {
-    for (let y = 0; y <= GRID_AXIS; y++) lines.push(segment(x, y, 0, x, y, GRID_AXIS));
-  }
-  return lines.join("");
+  return voxels;
 }
 
 function framesForRoom(frames) {
@@ -118,18 +168,19 @@ export class HyperGrid {
     this.destroyed = false;
     this.physicalCubeCount = PHYSICAL_CUBE_COUNT;
     this.physicalWaypointCount = PHYSICAL_WAYPOINT_COUNT;
-    this.segmentCount = LATTICE_SEGMENT_COUNT;
+    this.voxelEdgeCount = VOXEL_EDGE_COUNT;
     this.svg = svgNode("svg", {
       class: "touch-hypergrid-svg",
       viewBox: "0 0 640 220",
       preserveAspectRatio: "xMidYMid meet",
       "aria-hidden": "true",
     });
-    this.lattice = svgNode("path", { class: "touch-hyper-lattice", d: latticePath() });
+    this.voxels = buildVoxels();
+    this.lattice = this.voxels;
     this.markers = svgNode("g", { class: "touch-hyper-markers" });
-    this.svg.append(this.lattice, this.markers);
+    this.svg.append(this.voxels, this.markers);
     host.replaceChildren(this.svg);
-    host.dataset.hypergridRenderer = "svg";
+    host.dataset.hypergridRenderer = "voxels";
     host.dataset.hypergridState = "ready";
     host.dataset.cubes = String(PHYSICAL_CUBE_COUNT);
     host.dataset.waypoints = String(PHYSICAL_WAYPOINT_COUNT);

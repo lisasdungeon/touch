@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.9 — 2026-09-22
+
+- Replaced the continuous room cage with 8,000 distinct Minecraft-style voxel
+  blocks: 400 five-foot cubes per tier across twenty vertical tiers.
+- Added a visible gap, separate top/front/side faces, and twelve owned edges to
+  every block so the room reads as stacked cubes instead of intersecting rails.
+- Matched the live Foundry scene projection to the Viewer voxel model while
+  preserving all 9,261 shared memory-bearing corner waypoints.
+- Kept the voxel stack static and trigger-rendered with no cube animation.
+
 ## 0.1.8 — 2026-09-22
 
 - Replaced the blank 17,261-element CSS cube/corner build with one deterministic

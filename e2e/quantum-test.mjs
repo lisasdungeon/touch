@@ -42,8 +42,9 @@ await check("manifest registers the fixed cube stylesheet", async () => {
   assert.ok(manifest.flags.hotReload.includes("styles/hypergrid.css"));
 });
 
-await check("CSS defines the static laser lattice and corner waypoints without WebGL or orbit controls", async () => {
-  assert.match(hyperCss, /\.touch-hyper-lattice/);
+await check("CSS defines discrete voxel faces, edges, and corner waypoints without animation", async () => {
+  assert.match(hyperCss, /\.touch-hyper-voxel-edges/);
+  assert.match(hyperCss, /\.touch-hyper-voxel-face/);
   assert.match(hyperCss, /stroke: #5eead4/);
   assert.match(hyperCss, /\.touch-hyper-waypoint/);
   assert.match(hyperCss, /touch-hyper-memory/);
@@ -66,6 +67,8 @@ console.log("== Scene and viewer surfaces ==");
 await check("the fixed wireframe lattice is a live Foundry canvas layer", async () => {
   assert.ok(canvas.touchHypergrid, "registered scene layer");
   assert.strictEqual(canvas.touchHypergrid.parent, canvas.interface, "scene lattice is attached to the live interface group");
+  assert.strictEqual(canvas.touchHypergrid.cubeCount, 20 ** 3, "scene surface draws 8,000 separate blocks");
+  assert.strictEqual(canvas.touchHypergrid.voxelEdgeCount, 20 ** 3 * 12, "each scene block owns twelve edges");
   assert.strictEqual(canvas.touchHypergrid.waypointCount, 21 ** 3, "every physical corner has a waypoint");
   assert.strictEqual(canvas.touchHypergrid.children.length, 2, "laser lattice and memory graphics");
 });
@@ -82,15 +85,18 @@ await check("Hub launcher opens the viewer while the viewer itself has no orbit 
   assert.strictEqual(T.viewer.element.querySelector(".touch-quantum-face"), null);
 });
 
-await check("viewer draws all stacked cubes as one deterministic lattice", async () => {
+await check("viewer draws 8,000 discrete Minecraft-style blocks across twenty tiers", async () => {
   const grid = await waitForGrid(T.viewer);
   assert.strictEqual(grid.physicalCubeCount, 20 ** 3, "one logical cube for every five-foot spatial cell");
   assert.strictEqual(grid.physicalWaypointCount, 21 ** 3, "every shared corner remains addressable");
-  assert.strictEqual(grid.segmentCount, 3 * 21 ** 2, "all three lattice axes are drawn");
+  assert.strictEqual(grid.voxelEdgeCount, 20 ** 3 * 12, "every block has its own twelve edges");
   assert.ok(T.viewer.element.querySelector(".touch-hypergrid-svg"));
-  assert.ok(T.viewer.element.querySelector(".touch-hyper-lattice")?.getAttribute("d")?.length > 1000);
+  const tiers = T.viewer.element.querySelectorAll(".touch-hyper-voxel-tier");
+  assert.strictEqual(tiers.length, 20, "twenty five-foot tiers reach 100 feet");
+  assert.ok([...tiers].every((tier) => tier.dataset.cubes === "400"), "each tier contains a 20 by 20 block floor");
+  assert.ok(T.viewer.element.querySelector(".touch-hyper-voxel-edges")?.getAttribute("d")?.length > 10000);
   assert.strictEqual(T.viewer.element.querySelectorAll(".touch-hyper-cube").length, 0, "no fragile cube DOM flood remains");
-  assert.strictEqual(T.viewer.element.querySelector("[data-hypergrid]").dataset.hypergridRenderer, "svg");
+  assert.strictEqual(T.viewer.element.querySelector("[data-hypergrid]").dataset.hypergridRenderer, "voxels");
 });
 
 await check("a ping lights memory-bearing waypoints at separate elevations", async () => {

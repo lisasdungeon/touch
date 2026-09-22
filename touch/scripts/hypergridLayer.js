@@ -1,7 +1,15 @@
-/** Canvas projection of Touch's fixed CSS-cube room and its memory corners. */
-import { CELL_FEET, GRID_AXIS, PHYSICAL_WAYPOINT_COUNT, sceneWaypoint } from "./hypergrid.js";
+/** Canvas projection of Touch's fixed voxel room and its memory corners. */
+import {
+  CELL_FEET,
+  GRID_AXIS,
+  PHYSICAL_CUBE_COUNT,
+  PHYSICAL_WAYPOINT_COUNT,
+  VOXEL_EDGE_COUNT,
+  sceneWaypoint,
+} from "./hypergrid.js";
 
 const LASER = 0x5eead4;
+const VOXEL_GAP = 0.08;
 
 function gridPixels(dimensions) {
   const distance = Math.max(1, Number(dimensions.distance) || CELL_FEET);
@@ -61,30 +69,47 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
     if (!canvas.scene || !canvas.dimensions) return;
     const dimensions = canvas.dimensions;
     const step = gridPixels(dimensions);
-    const lattice = new PIXI.Graphics();
+    const voxels = new PIXI.Graphics();
     const memory = new PIXI.Graphics();
-    this.#drawLattice(lattice, step, dimensions);
-    this.#drawWaypoints(lattice, step, dimensions);
+    voxels.eventMode = "none";
+    memory.eventMode = "none";
+    this.#drawVoxels(voxels, step, dimensions);
+    this.#drawWaypoints(voxels, step, dimensions);
     this.#drawMemory(memory, step, dimensions);
-    this.addChild(lattice);
+    this.addChild(voxels);
     this.addChild(memory);
-    this.lattice = lattice;
+    this.voxels = voxels;
+    this.lattice = voxels;
     this.memory = memory;
+    this.cubeCount = PHYSICAL_CUBE_COUNT;
     this.waypointCount = PHYSICAL_WAYPOINT_COUNT;
+    this.voxelEdgeCount = VOXEL_EDGE_COUNT;
   }
 
-  #drawLattice(graphics, step, dimensions) {
+  #drawVoxels(graphics, step, dimensions) {
     const line = (from, to) => graphics.moveTo(from.x, from.y).lineTo(to.x, to.y);
-    for (let y = 0; y <= GRID_AXIS; y++) for (let z = 0; z <= GRID_AXIS; z++) {
-      line(project(0, y, z, step, dimensions), project(GRID_AXIS, y, z, step, dimensions));
+    const pairs = [
+      [0, 1], [0, 2], [0, 4], [7, 3], [7, 5], [7, 6],
+      [1, 3], [1, 5], [2, 3], [2, 6], [4, 5], [4, 6],
+    ];
+    for (let y = 0; y < GRID_AXIS; y++) for (let z = 0; z < GRID_AXIS; z++) {
+      for (let x = 0; x < GRID_AXIS; x++) {
+        const low = VOXEL_GAP;
+        const high = 1 - VOXEL_GAP;
+        const points = [
+          project(x + low, y + low, z + low, step, dimensions),
+          project(x + high, y + low, z + low, step, dimensions),
+          project(x + low, y + high, z + low, step, dimensions),
+          project(x + high, y + high, z + low, step, dimensions),
+          project(x + low, y + low, z + high, step, dimensions),
+          project(x + high, y + low, z + high, step, dimensions),
+          project(x + low, y + high, z + high, step, dimensions),
+          project(x + high, y + high, z + high, step, dimensions),
+        ];
+        for (const [from, to] of pairs) line(points[from], points[to]);
+      }
     }
-    for (let x = 0; x <= GRID_AXIS; x++) for (let z = 0; z <= GRID_AXIS; z++) {
-      line(project(x, 0, z, step, dimensions), project(x, GRID_AXIS, z, step, dimensions));
-    }
-    for (let x = 0; x <= GRID_AXIS; x++) for (let y = 0; y <= GRID_AXIS; y++) {
-      line(project(x, y, 0, step, dimensions), project(x, y, GRID_AXIS, step, dimensions));
-    }
-    graphics.stroke({ width: 1, color: LASER, alpha: 0.5, cap: "round" });
+    graphics.stroke({ width: 0.75, color: LASER, alpha: 0.58, cap: "round", join: "round" });
   }
 
   #drawWaypoints(graphics, step, dimensions) {
