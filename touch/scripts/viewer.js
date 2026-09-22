@@ -147,7 +147,7 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
     this.hypergrid?.destroy?.();
     this.hypergrid = null;
     if (!host) return;
-    const { HyperGrid } = await import("./hypergrid.js");
+    const { HyperGrid } = await import("./hypergrid.js?release=0.1.11");
     if (mount !== this.#gridMount || !this.rendered || host !== this.element?.querySelector("[data-hypergrid]")) return;
     this.hypergrid = new HyperGrid(host);
     this.refreshHypergrid();

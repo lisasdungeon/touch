@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.11 — 2026-09-22
+
+- Added a versioned release entrypoint and versioned live-surface imports so an
+  already-open Foundry client cannot reuse the pre-fix `hypergridLayer.js`
+  module graph after an update.
+- Preserved the 0.1.10 thin-wireframe renderer and dual PIXI Graphics support.
+
 ## 0.1.10 — 2026-09-22
 
 - Removed every voxel face fill so the room uses only thin, static cube edges

@@ -10,17 +10,17 @@ let hubClassPromise;
 let canvasLayersPromise;
 
 async function loadViewerClass() {
-  viewerClassPromise ??= import("./viewer.js").then(({ SonarViewer }) => SonarViewer);
+  viewerClassPromise ??= import("./viewer.js?release=0.1.11").then(({ SonarViewer }) => SonarViewer);
   return viewerClassPromise;
 }
 
 async function loadHubClass() {
-  hubClassPromise ??= import("./hub.js").then(({ SonarHub }) => SonarHub);
+  hubClassPromise ??= import("./hub.js?release=0.1.11").then(({ SonarHub }) => SonarHub);
   return hubClassPromise;
 }
 
 async function loadCanvasLayers() {
-  canvasLayersPromise ??= import("./canvasLayers.js");
+  canvasLayersPromise ??= import("./canvasLayers.js?release=0.1.11");
   return canvasLayersPromise;
 }
 
