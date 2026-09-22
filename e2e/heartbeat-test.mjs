@@ -1,6 +1,6 @@
 /**
  * e2e/heartbeat-test.mjs — heartbeat timers: per-emitter countdown math,
- * corner monitor deployment on lattice corners, hub ♥ column with live
+ * corner monitor deployment on lattice corners, hub pulse column with live
  * ticker, and viewer status heartbeat.
  */
 import "./foundry-mock.mjs";
@@ -115,7 +115,7 @@ await checkAsync("clear removes monitors but not junctions or hand monitors", as
 });
 
 console.log("== Hub heartbeat UI ==");
-await checkAsync("hub rows show ♥ countdown and ticker updates it", async () => {
+await checkAsync("hub rows show pulse countdown and ticker updates it", async () => {
   await T.openHub();
   const root = T.hub.element;
   const cell = root.querySelector('[data-beat-id="token.tok-hero"]');

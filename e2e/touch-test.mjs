@@ -220,25 +220,36 @@ check("calibrate clears frames and filter", () => {
 
 // ---------------------------------------------------------- scene controls
 console.log("== Scene controls ==");
-check("Touch scene control group with GM hub button", () => {
-  const controls = [];
+check("Touch scene control group with GM hub button (v13+ Record API)", () => {
+  // Real Foundry v13+/v14 passes a Record keyed by control name.
+  const controls = {};
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  const group = controls.find((c) => c.name === "touch");
+  const group = controls.touch;
   assert.ok(group, "top-level Touch control group registered");
-  assert.ok(group.tools.some((t) => t.name === "touch-hub"), "hub button present");
-  assert.ok(group.tools.some((t) => t.name === "touch-viewer"), "viewer button present");
-  assert.ok(group.tools.some((t) => t.name === "touch-waypoint"), "waypoint button present");
-  assert.ok(group.tools.some((t) => t.name === "touch-pathway"), "pathway button present");
-  const hub = group.tools.find((t) => t.name === "touch-hub");
+  const tools = Object.values(group.tools);
+  assert.ok(tools.some((t) => t.name === "touch-hub"), "hub button present");
+  assert.ok(tools.some((t) => t.name === "touch-viewer"), "viewer button present");
+  assert.ok(tools.some((t) => t.name === "touch-waypoint"), "waypoint button present");
+  assert.ok(tools.some((t) => t.name === "touch-pathway"), "pathway button present");
+  const hub = group.tools["touch-hub"];
   assert.strictEqual(hub.button, true, "hub is an action button, not a toggle tool");
+  assert.strictEqual(typeof hub.onChange, "function", "hub carries onChange (v13+ handler)");
+  assert.strictEqual(typeof hub.onClick, "function", "hub keeps onClick (v12 handler)");
 });
 
 await checkAsync("hub button click opens the GM hub", async () => {
+  const controls = {};
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+  await controls.touch.tools["touch-hub"].onChange();
+  assert.ok(window.touch.hub?.rendered, "hub rendered via control click");
+});
+
+check("v12 legacy array controls still supported", () => {
   const controls = [];
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  const hub = controls.find((c) => c.name === "touch").tools.find((t) => t.name === "touch-hub");
-  await hub.onClick();
-  assert.ok(window.touch.hub?.rendered, "hub rendered via control click");
+  const group = controls.find((c) => c?.name === "touch");
+  assert.ok(group, "group pushed onto the legacy array");
+  assert.ok(Array.isArray(group.tools) && group.tools.some((t) => t.name === "touch-hub"), "array tools kept");
 });
 
 // ------------------------------------------------------------------ summary

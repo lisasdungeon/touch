@@ -59,7 +59,7 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   instead of waiting for the global pulse; fast emitters are staggered so they
   don't blink in unison, while rate-0 objects all ring together on the global
   interval like a classic sonar sweep.
-- **Heartbeat timers** — every row in the GM Hub carries a live ♥ countdown
+- **Heartbeat timers** — every row in the GM Hub carries a live pulse countdown
   to that object's next ping (exact same cadence math the pinger uses),
   beating faster as the ping approaches. The viewer's status line carries a
   heartbeat monitor for the whole room, racing as the next beat nears.
@@ -93,7 +93,7 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   `touch.captureSignature(doc)`, `touch.trackOf(doc)`, `touch.trackGet(id)`
   (includes `sig` and `matches`), `touch.trackList()`.
 - **Explicit persistent identities** — the GM can hand any object a
-  **permanent identity id** (hub row 🪪 button, or the API): the id is written
+  **permanent identity id** (hub row identity button, or the API): the id is written
   to the document (`flags.touch.identity`), registered as a track tied to the
   object's snapshot, and every zone the object crosses thereafter continues
   that same id. Assigned ids are **permanent** — even "Forget All" only

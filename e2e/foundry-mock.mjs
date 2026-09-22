@@ -176,7 +176,9 @@ globalThis.game = {
   socket: {
     handlers: new Map(),
     outbox: [],
-    register(name, fn) { this.handlers.set(name, fn); },
+    // Real Foundry SocketInterface API: `on` to subscribe, `emit` to send.
+    // (`register` was a mock-only invention that crashed real v14.)
+    on(name, fn) { this.handlers.set(name, fn); },
     // Real Foundry does not loop socket broadcasts back to the sender.
     emit(name, payload) { this.outbox.push({ name, payload }); },
   },

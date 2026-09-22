@@ -129,7 +129,7 @@
           <span class="touch-td-wh">{{localize "TOUCH.Hub.WallHeightHeader"}}</span>
           <span class="touch-td-emission">{{localize "TOUCH.Hub.EmissionHeader"}}</span>
           <span class="touch-td-rate">{{localize "TOUCH.Hub.RateHeader"}}</span>
-          <span class="touch-td-beat" title="{{localize "TOUCH.Hub.BeatHint"}}">♥ {{localize "TOUCH.Hub.BeatHeader"}}</span>
+          <span class="touch-td-beat" title="{{localize "TOUCH.Hub.BeatHint"}}"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> {{localize "TOUCH.Hub.BeatHeader"}}</span>
           <span class="touch-td-remove"></span>
           <span class="touch-td-mute">{{localize "TOUCH.Hub.MuteHeader"}}</span>
           <span class="touch-td-goto">{{localize "TOUCH.Hub.GotoHeader"}}</span>
@@ -290,7 +290,7 @@
         {{#each memory.tracks}}
           <span class="touch-track-chip {{#if assigned}}touch-track-assigned{{/if}} {{#if groupId}}touch-track-grouped{{/if}}"
                 title="{{id}} · {{cells}} cells · {{points}} fixes{{#if assigned}} · {{localize "TOUCH.Identity.AssignedMark"}}{{/if}}{{#if groupId}} · {{localize "TOUCH.Groups.MemberHint"}}{{/if}}">
-            {{label}} · {{points}} Fixes{{#if assigned}} · 🪪{{/if}}{{#if groupId}} · ⬌{{/if}}
+            {{label}} · {{points}} Fixes{{#if assigned}} · <i class="fa-solid fa-id-badge" aria-hidden="true"></i>{{/if}}{{#if groupId}} · <i class="fa-solid fa-link" aria-hidden="true"></i>{{/if}}
           </span>
         {{/each}}
       </div>

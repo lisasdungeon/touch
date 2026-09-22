@@ -1,0 +1,148 @@
+/* --------------------------------------------------------------- GM hub */
+
+.touch-hub-root {
+  display: grid;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.touch-hub-root h2 {
+  font-size: 13px;
+  margin: 0 0 6px;
+  border-bottom: 1px solid var(--touch-accent-dim);
+  padding-bottom: 4px;
+}
+
+.touch-hub-global-grid {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.touch-hub-global-grid label { display: flex; align-items: center; gap: 6px; }
+
+.touch-hub-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Bulk verticals: one floor range / wall extent for every selected kind */
+.touch-hub-verts {
+  margin-top: 10px;
+  border: 1px solid var(--touch-grid, #26364a);
+  border-radius: 6px;
+  padding: 8px 10px 6px;
+}
+.touch-hub-verts legend {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  padding: 0 4px;
+}
+.touch-verts-grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 6px 12px;
+  align-items: end;
+}
+.touch-verts-target select {
+  width: 100%;
+}
+.touch-verts-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+}
+.touch-verts-kinds > span {
+  font-size: 11px;
+  opacity: 0.65;
+  margin-right: 2px;
+}
+.touch-verts-kind {
+  flex-direction: row;
+  gap: 4px;
+}
+.touch-verts-actions {
+  display: flex;
+  gap: 6px;
+}
+.touch-verts-hint {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  opacity: 0.55;
+  margin: 4px 0 0;
+}
+.touch-hub-verts input[type="number"] {
+  width: 84px;
+}
+
+.touch-table { display: grid; gap: 2px; }
+.touch-thead,
+.touch-row {
+  display: grid;
+  grid-template-columns: 1.1fr 0.5fr 1fr 52px 88px 88px 74px auto auto 56px;
+  gap: 5px;
+  align-items: center;
+}
+
+/* Heartbeat column: live seconds-to-next-ping, pulsing when due within 1s */
+.touch-td-beat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  opacity: 0.9;
+}
+.touch-td-beat .fa-heart-pulse {
+  color: var(--touch-accent);
+  animation: touch-beat 1s ease-in-out infinite;
+}
+.touch-td-beat.touch-beat-near .fa-heart-pulse {
+  animation-duration: 0.45s;
+}
+@keyframes touch-beat {
+  0%, 100% { transform: scale(1); opacity: 0.65; }
+  30% { transform: scale(1.35); opacity: 1; }
+  45% { transform: scale(1.1); }
+  60% { transform: scale(1.25); }
+}
+
+.touch-td-rate { display: flex; align-items: center; gap: 2px; }
+.touch-td-rate input,
+.touch-td-rate select { min-width: 0; width: 100%; padding: 1px 2px; font-size: 11px; }
+.touch-thead { font-weight: 600; opacity: 0.8; padding: 2px 4px; }
+.touch-row { padding: 3px 4px; border-radius: 4px; }
+.touch-row:hover { background: #ffffff08; }
+
+.touch-td-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.touch-td-type { opacity: 0.8; font-size: 12px; }
+.touch-td-int { display: flex; align-items: center; gap: 6px; }
+.touch-td-int input[type="range"] { flex: 1; min-width: 70px; }
+.touch-td-elev input,
+.touch-td-levels input {
+  width: 100%;
+  min-width: 44px;
+  padding: 1px 4px;
+  font-size: 12px;
+  text-align: right;
+}
+.touch-td-levels,
+.touch-td-wh { display: flex; align-items: center; gap: 2px; }
+.touch-td-levels-empty { opacity: 0.35; text-align: center; }
+.touch-intensity-value { min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
+
+.touch-mute.active { color: #f87171; }
+
+.touch-empty { opacity: 0.7; font-style: italic; }
+
+.touch-hub-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+}
+.touch-hub-settings label { display: grid; gap: 2px; font-size: 12px; }
+.touch-hub-settings input { width: 100%; }

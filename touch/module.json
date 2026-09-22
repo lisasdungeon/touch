@@ -3,7 +3,7 @@
   "title": "Touch — Sonar Scene Reconstruction",
   "description": "A spatial sonar system. Tokens, lights and sounds emit pings; six wall-mounted cameras (top, bottom, four sides) reconstruct the scene into a live 4D sonogram rendered with CSS.",
   "authors": [
-    { "name": "Architect Barry 'Odinn' Walter", "email": "bd@rnk-enterprise.us" }
+    { "name": "Lisa's Dungeon", "email": "Lisasdungeon@gmail.com" }
   ],
   "version": "0.1.1",
   "url": "https://github.com/lisasdungeon/touch",
@@ -20,6 +20,13 @@
     { "lang": "en", "name": "English", "path": "lang/en.json" }
   ],
   "flags": {
-    "hotReload": ["lang/en.json", "styles/touch.css", "styles/quantum.css"]
+    "hotReload": [
+      "lang/en.json",
+      "styles/touch.css",
+      "styles/touch-base.css",
+      "styles/touch-viewer.css",
+      "styles/touch-hub.css",
+      "styles/quantum.css"
+    ]
   }
 }
