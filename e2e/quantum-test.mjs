@@ -81,7 +81,7 @@ await check("Hub launcher opens the viewer while the viewer itself has no orbit 
   for (let index = 0; index < 30 && !T.viewer?.rendered; index++) await new Promise((resolve) => setTimeout(resolve, 10));
   assert.ok(T.viewer?.rendered, "viewer opened");
   assert.ok(T.viewer.element.querySelector("[data-hypergrid]"));
-  assert.match(T.viewer.element.querySelector("[data-build]")?.textContent ?? "", /scene 5\/5/);
+  assert.match(T.viewer.element.querySelector("[data-build]")?.textContent ?? "", /scene 4\/4/);
   assert.strictEqual(T.viewer.element.querySelector("[data-action=orbitLeft]"), null);
   assert.strictEqual(T.viewer.element.querySelector(".touch-quantum-face"), null);
 });

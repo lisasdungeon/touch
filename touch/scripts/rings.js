@@ -5,7 +5,7 @@
  * arc sweeps in their facing direction. Rings are clipped by walls when the
  * token layer provides an LOS/interior point source.
  */
-import { strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.13";
+import { strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.14";
 
 export class RingLayer extends foundry.canvas.layers.CanvasLayer {
   constructor() {

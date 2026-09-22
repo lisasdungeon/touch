@@ -21,16 +21,22 @@ for (const fn of Hooks.events.ready ?? []) fn();
 console.log("== Live canvas lifecycle ==");
 await check("canvasReady creates and draws every Touch surface", async () => {
   assert.strictEqual(canvas.touchHypergrid, undefined);
+  const retired = new PIXI.Container();
+  retired.options = { name: "touchZones" };
+  canvas.primary.group.addChild(retired);
+  canvas.touchZones = retired;
   for (const fn of Hooks.events.canvasReady ?? []) await fn();
-  for (const property of ["touchHypergrid", "touchZones", "touchPathways", "touchWaypoints", "touchRings"]) {
+  for (const property of ["touchHypergrid", "touchPathways", "touchWaypoints", "touchRings"]) {
     assert.ok(canvas[property], `${property} missing`);
-    const expectedParent = ["touchHypergrid", "touchZones"].includes(property) ? canvas.primary.group : canvas.interface;
+    const expectedParent = property === "touchHypergrid" ? canvas.primary.group : canvas.interface;
     assert.strictEqual(canvas[property].parent, expectedParent, `${property} attached to the wrong Foundry group`);
     assert.ok(canvas[property].children.length > 0, `${property} was not drawn`);
     assert.strictEqual(canvas[property].visible, true, `${property} is hidden`);
     assert.strictEqual(canvas[property].renderable, true, `${property} is not renderable`);
     assert.ok(canvas[property].zIndex >= 900, `${property} is behind core canvas surfaces`);
   }
+  assert.strictEqual(canvas.touchZones, undefined, "retired A1/B1 overlay must stay absent");
+  assert.strictEqual(retired.destroyed, true, "an overlay left by the prior release must be destroyed");
   assert.strictEqual(canvas.touchRings.active, true, "scene rings are active without opening the Viewer");
   assert.strictEqual(canvas.stage.listenerCount("pointerdown"), 1, "placement listener attached once");
 });
@@ -38,28 +44,28 @@ await check("canvasReady creates and draws every Touch surface", async () => {
 await check("canvasTearDown removes every owned surface", async () => {
   for (const fn of Hooks.events.canvasTearDown ?? []) await fn();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  for (const property of ["touchHypergrid", "touchZones", "touchPathways", "touchWaypoints", "touchRings"]) {
+  for (const property of ["touchHypergrid", "touchPathways", "touchWaypoints", "touchRings"]) {
     assert.strictEqual(canvas[property], undefined, `${property} survived teardown`);
   }
   assert.strictEqual(canvas.stage.listenerCount("pointerdown"), 0);
 });
 
 await check("one failed surface cannot block waypoints, pathways, or rings", async () => {
-  const { ZoneGridLayer } = await import("../touch/scripts/zoneGridLayer.js?release=0.1.13");
-  const { ensureTouchCanvasLayers, teardownTouchCanvasLayers } = await import("../touch/scripts/canvasLayers.js?release=0.1.13");
-  const original = ZoneGridLayer.prototype.draw;
+  const { HypergridLayer } = await import("../touch/scripts/hypergridLayer.js?release=0.1.14");
+  const { ensureTouchCanvasLayers, teardownTouchCanvasLayers } = await import("../touch/scripts/canvasLayers.js?release=0.1.14");
+  const original = HypergridLayer.prototype.draw;
   const logged = console.error;
-  ZoneGridLayer.prototype.draw = async () => { throw new Error("simulated zone failure"); };
+  HypergridLayer.prototype.draw = async () => { throw new Error("simulated room failure"); };
   console.error = () => {};
   try {
     await ensureTouchCanvasLayers();
-    assert.strictEqual(canvas.touchZones, undefined, "failed layer should be discarded");
-    for (const property of ["touchHypergrid", "touchPathways", "touchWaypoints", "touchRings"]) {
-      assert.ok(canvas[property]?.parent, `${property} was blocked by the failed zone layer`);
+    assert.strictEqual(canvas.touchHypergrid, undefined, "failed layer should be discarded");
+    for (const property of ["touchPathways", "touchWaypoints", "touchRings"]) {
+      assert.ok(canvas[property]?.parent, `${property} was blocked by the failed room layer`);
     }
   } finally {
     console.error = logged;
-    ZoneGridLayer.prototype.draw = original;
+    HypergridLayer.prototype.draw = original;
     await teardownTouchCanvasLayers();
   }
 });

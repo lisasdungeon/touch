@@ -7,15 +7,15 @@ import {
   ROOM_FEET,
   VOXEL_EDGE_COUNT,
   sceneWaypoint,
-} from "./hypergrid.js?release=0.1.13";
-import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.13";
+} from "./hypergrid.js?release=0.1.14";
+import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.14";
 
 const LASER = 0x5eead4;
 const VOXEL_GAP = 0.08;
 let threeRoomPromise;
 
 function loadThreeRoom() {
-  threeRoomPromise ??= import("./threeRoom.js?release=0.1.13");
+  threeRoomPromise ??= import("./threeRoom.js?release=0.1.14");
   return threeRoomPromise;
 }
 

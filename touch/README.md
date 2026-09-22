@@ -21,6 +21,9 @@ Viewer.
   elevation boundary fires one addressed ping and briefly lights the contacted
   cube edges. The GM is the single movement authority, preventing duplicate
   multiplayer emissions.
+- **Data-only zone addresses** — pings still receive readable locations such
+  as `3C-L01-T01`, but the former A1/B1 label planes are not drawn over the
+  scene or the WebGL room.
 - **Scene controls** — Touch installs its own top-level control group
   (broadcast-tower icon, reachable with the **T** hotkey cycle) holding the
   **Sonar Viewer**, the **Sonar GM Hub** (GM only), and the Waypoint and

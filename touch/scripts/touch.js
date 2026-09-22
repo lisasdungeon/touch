@@ -2,7 +2,7 @@
 import { MODULE_ID, SOCKET_NAME, SOCKET_MESSAGES, DEFAULTS, CAMERAS, SETTINGS } from "./constants.js";
 import { collectWalls } from "./emitters.js";
 import { registerHelpers } from "./helpers.js";
-import { registerRuntime } from "./runtime.js?release=0.1.13";
+import { registerRuntime } from "./runtime.js?release=0.1.14";
 import { bindCanvasInteractions, unbindCanvasInteractions } from "./canvasInteractions.js";
 
 let viewerClassPromise;
@@ -10,17 +10,17 @@ let hubClassPromise;
 let canvasLayersPromise;
 
 async function loadViewerClass() {
-  viewerClassPromise ??= import("./viewer.js?release=0.1.13").then(({ SonarViewer }) => SonarViewer);
+  viewerClassPromise ??= import("./viewer.js?release=0.1.14").then(({ SonarViewer }) => SonarViewer);
   return viewerClassPromise;
 }
 
 async function loadHubClass() {
-  hubClassPromise ??= import("./hub.js?release=0.1.13").then(({ SonarHub }) => SonarHub);
+  hubClassPromise ??= import("./hub.js?release=0.1.14").then(({ SonarHub }) => SonarHub);
   return hubClassPromise;
 }
 
 async function loadCanvasLayers() {
-  canvasLayersPromise ??= import("./canvasLayers.js?release=0.1.13");
+  canvasLayersPromise ??= import("./canvasLayers.js?release=0.1.14");
   return canvasLayersPromise;
 }
 
@@ -137,7 +137,6 @@ Hooks.on("canvasReady", async () => {
   window.touch?.memory?.load(canvas.scene);
   window.touch?.tracks?.load(canvas.scene);
   canvas.touchHypergrid?.refreshHypergrid();
-  canvas.touchZones?.refreshZones();
   bindCanvasInteractions();
 });
 
@@ -145,7 +144,6 @@ Hooks.on("updateScene", (scene, changes) => {
   if (scene?.id !== canvas?.scene?.id) return;
   if (["width", "height", "padding", "grid"].some((key) => key in (changes ?? {}))) {
     canvas.touchHypergrid?.rebuildGeometry?.();
-    canvas.touchZones?.refreshZones();
   }
 });
 

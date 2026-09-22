@@ -5,7 +5,7 @@
  * Ring emission stays in rings.js; this layer is the persistent visual.
  */
 import { getWaypoints } from "./waypoints.js";
-import { fillCircle, fillPath, fillStrokePath, strokePath } from "./pixiCompat.js?release=0.1.13";
+import { fillCircle, fillPath, fillStrokePath, strokePath } from "./pixiCompat.js?release=0.1.14";
 
 const DEG = Math.PI / 180;
 const WP_COLOR = 0x5eead4;

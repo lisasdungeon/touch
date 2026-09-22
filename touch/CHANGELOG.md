@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.14 — 2026-09-22
+
+- Removed the A1/B1 numbered zone overlay and all of its stacked label planes
+  from the live Foundry scene, leaving the WebGL room unobstructed.
+- Kept alphabetic/numeric zone IDs as data-only ping addresses so contacts,
+  memory, and the GM tools retain their existing location references.
+- Added retirement cleanup for an already-mounted `touchZones` layer so the
+  obsolete overlay is removed when the fresh canvas module graph starts.
+- Updated the Viewer surface counter from five layers to the four remaining
+  live scene surfaces and added a fresh 0.1.14 entrypoint.
+
 ## 0.1.13 — 2026-09-22
 
 - Added a bundled Three.js WebGL2 renderer for the live Foundry scene, using a
