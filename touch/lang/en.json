@@ -34,8 +34,8 @@
       "BandLight": "Light"
     },
     "HyperGrid": {
-      "Aria": "Fixed five-foot 4D wireframe room",
-      "Dimensions": "20 × 20 × 20 spatial cubes · 20 time states · 5 ft per cube",
+      "Aria": "Fixed ten-foot 4D wireframe room",
+      "Dimensions": "10 × 10 × 10 spatial cubes · 10 time states · 10 ft per cube",
       "AxisX": "X · 100 ft",
       "AxisY": "Y · 100 ft",
       "AxisZ": "Z · 100 ft",

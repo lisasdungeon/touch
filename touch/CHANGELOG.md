@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.12 — 2026-09-22
+
+- Fixed the PIXI 7 text-style crash in the numbered scene-zone layer by using
+  legacy primitive stroke and drop-shadow properties on older Foundry clients.
+- Made canvas-surface startup fault-isolated so one failed visual can no longer
+  prevent waypoint, pathway, or ping-ring layers from loading.
+- Enlarged the physical lattice from 5-foot microcells to readable 10-foot
+  cubes: 1,000 cubes and 1,331 memory-bearing corners across the same
+  100 × 100 × 100-foot room.
+- Added immediate, GM-authoritative movement pings for tokens, ambient lights,
+  ambient sounds, walls, and tiles while they are inside the scene room.
+- Added a fresh 0.1.12 module entrypoint so clients cannot retain the broken
+  zone-label module graph.
+
 ## 0.1.11 — 2026-09-22
 
 - Added a versioned release entrypoint and versioned live-surface imports so an

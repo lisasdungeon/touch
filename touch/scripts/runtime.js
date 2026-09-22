@@ -19,6 +19,7 @@ import {
   findDocumentByEmitterId,
   pingWaypoint,
   makeEmitter,
+  insideScene,
 } from "./runtime-helpers.js";
 
 export function registerRuntime(loadViewerClass, loadHubClass) {
@@ -367,17 +368,27 @@ export function registerRuntime(loadViewerClass, loadHubClass) {
       }
       if (crossed) touch.hub?.render();
     };
+    const emitMovementPing = (doc, change, kind) => {
+      if (!game.user.isGM || doc?._touchStamping || !changedPosition(change)) return false;
+      const emitter = makeEmitter(doc, kind);
+      if (!emitter || !insideScene(emitter.x, emitter.y)) return false;
+      emitter.movement = true;
+      touch.pinger?.emitOne(emitter);
+      return true;
+    };
+    touch.emitMovementPing = emitMovementPing;
     Hooks.on("createToken", (doc) => { touch.pinger?.emitOne(makeEmitter(doc, "token")); emitPathwayTraces(doc); });
     Hooks.on("updateToken", (doc, change) => {
-      if (doc._touchStamping || !changedPosition(change)) return;
-      touch.pinger?.emitOne(makeEmitter(doc, "token"));
-      emitPathwayTraces(doc);
+      if (emitMovementPing(doc, change, "token")) emitPathwayTraces(doc);
     });
     Hooks.on("createAmbientLight", (doc) => touch.pinger?.emitOne(makeEmitter(doc, "light")));
     Hooks.on("createAmbientSound", (doc) => touch.pinger?.emitOne(makeEmitter(doc, "sound")));
+    Hooks.on("updateAmbientLight", (doc, change) => emitMovementPing(doc, change, "light"));
+    Hooks.on("updateAmbientSound", (doc, change) => emitMovementPing(doc, change, "sound"));
+    Hooks.on("updateTile", (doc, change) => emitMovementPing(doc, change, "tile"));
     const syncWalls = () => { if (canvas.scene) touch.wavefield?.setWalls(canvas.scene.id, collectWalls(canvas.scene)); };
     Hooks.on("createWall", syncWalls);
-    Hooks.on("updateWall", syncWalls);
+    Hooks.on("updateWall", (doc, change) => { emitMovementPing(doc, change, "wall"); syncWalls(); });
     Hooks.on("deleteWall", syncWalls);
     console.debug("Touch | ready");
   });

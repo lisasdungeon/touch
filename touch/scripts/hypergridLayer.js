@@ -6,8 +6,8 @@ import {
   PHYSICAL_WAYPOINT_COUNT,
   VOXEL_EDGE_COUNT,
   sceneWaypoint,
-} from "./hypergrid.js?release=0.1.11";
-import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.11";
+} from "./hypergrid.js?release=0.1.12";
+import { fillCircle, strokeCircle, strokePath } from "./pixiCompat.js?release=0.1.12";
 
 const LASER = 0x5eead4;
 const VOXEL_GAP = 0.08;

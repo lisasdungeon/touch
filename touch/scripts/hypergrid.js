@@ -1,11 +1,11 @@
 /** Fixed 4D room: deterministic SVG lattice with memory-bearing corners. */
 import { getPathways } from "./pathways.js";
 
-export const CELL_FEET = 5;
+export const CELL_FEET = 10;
 export const ROOM_FEET = 100;
 export const GRID_AXIS = ROOM_FEET / CELL_FEET;
 export const WAYPOINT_AXIS = GRID_AXIS + 1;
-export const TIME_CELL_SECONDS = 5;
+export const TIME_CELL_SECONDS = 10;
 export const PHYSICAL_CUBE_COUNT = GRID_AXIS ** 3;
 export const PHYSICAL_WAYPOINT_COUNT = WAYPOINT_AXIS ** 3;
 export const HYPERCELL_COUNT = GRID_AXIS ** 4;
@@ -42,7 +42,7 @@ function trackColor(id) {
   return `hsl(${hue} 82% 68%)`;
 }
 
-/** Maps scene coordinates to a shared corner in the five-foot 4D lattice. */
+/** Maps scene coordinates to a shared corner in the ten-foot 4D lattice. */
 export function sceneWaypoint(x, y, elevation, born, {
   dimensions = canvas?.dimensions ?? {},
   now = Date.now(),
@@ -68,9 +68,10 @@ function svgNode(tag, attributes = {}) {
 }
 
 function project(x, y, z) {
+  const scale = CELL_FEET / 5;
   return {
-    x: 320 + (x - GRID_AXIS / 2) * 13 + (z - GRID_AXIS / 2) * 6.5,
-    y: 168 - y * 5.8 + (z - GRID_AXIS / 2) * 3,
+    x: 320 + (x - GRID_AXIS / 2) * 13 * scale + (z - GRID_AXIS / 2) * 6.5 * scale,
+    y: 168 - y * 5.8 * scale + (z - GRID_AXIS / 2) * 3 * scale,
   };
 }
 

@@ -95,7 +95,7 @@ check("viewer shows six camera tiles", () => {
 });
 check("viewer renders the fixed 4D wireframe room", () => {
   assert.ok(document.querySelector("[data-hypergrid]"), "CSS cube lattice host");
-  assert.match(document.querySelector("[data-hypergrid-dimensions]").textContent, /20 × 20 × 20/);
+  assert.match(document.querySelector("[data-hypergrid-dimensions]").textContent, /10 × 10 × 10/);
 });
 
 // ------------------------------------------------------------ ping pipeline
@@ -194,7 +194,7 @@ await checkAsync("filter limits the 4D room to one physical elevation band", asy
   v.floorFilter = 1;
   v.flush();
   await v.hypergrid.ready;
-  assert.ok([...v.hypergrid.active].every((point) => ["2", "3"].includes(point.dataset.y)), "only F1 corners remain");
+  assert.ok([...v.hypergrid.active].every((point) => ["1", "2"].includes(point.dataset.y)), "only F1 corners remain");
   // reset
   v.floorFilter = null;
   v.flush();

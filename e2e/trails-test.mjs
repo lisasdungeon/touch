@@ -53,7 +53,7 @@ await check("each fix becomes a memory-bearing corner waypoint", async () => {
   orcTrailId = T.lastTrackEvent.id;
   viewer.flush();
   await grid();
-  assert.strictEqual(corners(orcTrailId).length, 3, "one corner per distinct five-foot fix");
+  assert.strictEqual(corners(orcTrailId).length, 3, "one corner per distinct ten-foot fix");
 });
 
 await check("the newest fix is tagged as the trail head", async () => {

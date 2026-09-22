@@ -6,7 +6,7 @@
  * Endpoints drag to reshape. Ring emission stays in rings.js.
  */
 import { getPathways, samplePathway, createPathway } from "./pathways.js";
-import { fillCircle, fillStrokeCircle, strokePath } from "./pixiCompat.js?release=0.1.11";
+import { fillCircle, fillStrokeCircle, strokePath } from "./pixiCompat.js?release=0.1.12";
 
 const PW_COLOR = 0x5eead4;
 

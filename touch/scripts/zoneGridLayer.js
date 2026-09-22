@@ -4,9 +4,22 @@ const ZONE_COLOR = 0x5eead4;
 const MAX_ZONE_CUBES = 50000;
 export const ZONE_LEVELS = 10;
 export const LEVEL_FEET = 10;
-export const CUBE_FEET = 5;
+export const CUBE_FEET = 10;
 export const ROOM_HEIGHT_FEET = ZONE_LEVELS * LEVEL_FEET;
 export const CUBE_TIERS = ROOM_HEIGHT_FEET / CUBE_FEET;
+
+function pixiMajor() {
+  return Number.parseInt(String(PIXI.VERSION ?? "8").split(".")[0], 10);
+}
+
+function cubePixelSize(dimensions, options = {}) {
+  const gridSize = Math.max(
+    1,
+    Number(options.gridSize ?? dimensions?.size ?? globalThis.canvas?.grid?.size) || 100
+  );
+  const gridDistance = Math.max(1, Number(options.gridDistance ?? dimensions?.distance) || 5);
+  return gridSize * CUBE_FEET / gridDistance;
+}
 
 /** Spreadsheet-style column labels: A...Z, AA...AZ, BA... */
 export function columnLabel(index) {
@@ -28,11 +41,8 @@ export function zoneId(row, column) {
 /** Resolve a canvas coordinate into its plan zone and vertical cube address. */
 export function zoneAddress(x, y, elevation = 0, options = {}) {
   const dimensions = options.dimensions ?? globalThis.canvas?.dimensions;
-  const size = Math.max(
-    1,
-    Number(options.gridSize ?? dimensions?.size ?? globalThis.canvas?.grid?.size) || 100
-  );
   if (!dimensions) return null;
+  const size = cubePixelSize(dimensions, options);
   const sceneX = Number(dimensions.sceneX) || 0;
   const sceneY = Number(dimensions.sceneY) || 0;
   const localX = Number(x) - sceneX;
@@ -60,8 +70,7 @@ export function zoneAddress(x, y, elevation = 0, options = {}) {
 }
 
 function makeText(value, style, alpha = 1) {
-  const major = Number.parseInt(String(PIXI.VERSION ?? "8").split(".")[0], 10);
-  const text = major >= 8 ? new PIXI.Text({ text: value, style }) : new PIXI.Text(value, style);
+  const text = pixiMajor() >= 8 ? new PIXI.Text({ text: value, style }) : new PIXI.Text(value, style);
   text.anchor?.set?.(0.5);
   text.eventMode = "none";
   text.alpha = alpha;
@@ -69,20 +78,31 @@ function makeText(value, style, alpha = 1) {
 }
 
 function textStyle(size) {
-  return {
+  const base = {
     fontFamily: "Arial, sans-serif",
     fontSize: size,
     fontWeight: "700",
     fill: ZONE_COLOR,
     align: "center",
+  };
+  if (pixiMajor() >= 8) return {
+    ...base,
     stroke: { color: 0x071117, width: Math.max(2, size / 7) },
     dropShadow: { color: 0x000000, alpha: 0.8, blur: 2, distance: 1 },
   };
+  return {
+    ...base,
+    stroke: 0x071117,
+    strokeThickness: Math.max(2, size / 7),
+    dropShadow: true,
+    dropShadowColor: 0x000000,
+    dropShadowAlpha: 0.8,
+    dropShadowBlur: 2,
+    dropShadowDistance: 1,
+  };
 }
 
-function createAddressTexture(columns, rows, size) {
-  const width = columns * size;
-  const height = rows * size;
+function createAddressTexture(columns, rows, size, width, height) {
   const scale = Math.min(1, 4096 / Math.max(width, height));
   const surface = document.createElement("canvas");
   surface.width = Math.max(1, Math.ceil(width * scale));
@@ -104,14 +124,19 @@ function createAddressTexture(columns, rows, size) {
   };
   const cellSize = Math.max(12, Math.min(24, size * 0.18));
   const headerSize = Math.max(15, Math.min(30, size * 0.24));
+  const center = (index, limit) => {
+    const start = Math.min(index * size, limit);
+    const end = Math.min((index + 1) * size, limit);
+    return (start + end) / 2;
+  };
   for (let column = 0; column < columns; column++) {
-    paint(columnLabel(column), (column + 0.5) * size, Math.max(10, size * 0.13), headerSize, 1);
+    paint(columnLabel(column), center(column, width), Math.max(10, size * 0.13), headerSize, 1);
   }
   for (let row = 0; row < rows; row++) {
-    const y = (row + 0.5) * size;
+    const y = center(row, height);
     paint(String(row + 1), Math.max(10, size * 0.13), y, headerSize, 1);
     for (let column = 0; column < columns; column++) {
-      paint(zoneId(row, column), (column + 0.5) * size, y, cellSize, 0.72);
+      paint(zoneId(row, column), center(column, width), y, cellSize, 0.72);
     }
   }
   return { texture: PIXI.Texture.from(surface), width, height };
@@ -143,9 +168,11 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
     this.removeChildren().forEach((child) => child.destroy({ children: true }));
     const dimensions = canvas?.dimensions;
     if (!canvas?.scene || !dimensions || canvas.grid?.isGridless) return;
-    const size = Math.max(1, Number(canvas.grid?.size ?? dimensions.size) || 100);
-    const columns = Math.max(0, Math.floor(Number(dimensions.columns) || Number(dimensions.sceneWidth) / size));
-    const rows = Math.max(0, Math.floor(Number(dimensions.rows) || Number(dimensions.sceneHeight) / size));
+    const size = cubePixelSize(dimensions);
+    const width = Math.max(0, Number(dimensions.sceneWidth) || 0);
+    const height = Math.max(0, Number(dimensions.sceneHeight) || 0);
+    const columns = Math.max(0, Math.ceil(width / size));
+    const rows = Math.max(0, Math.ceil(height / size));
     if (!columns || !rows || columns * rows * CUBE_TIERS > MAX_ZONE_CUBES) {
       this.zoneCount = 0;
       this.cubeCount = 0;
@@ -158,13 +185,11 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
     labels.eventMode = "none";
     labels.interactiveChildren = false;
     const levelStyle = textStyle(Math.max(16, Math.min(32, size * 0.26)));
-    const cubeRise = Math.max(7, size * 0.09);
+    const cubeRise = Math.max(20, size * 0.34);
     const cubeDrift = cubeRise * 0.55;
     const originX = Number(dimensions.sceneX) || 0;
     const originY = Number(dimensions.sceneY) || 0;
-    const width = columns * size;
-    const height = rows * size;
-    const addressPlane = createAddressTexture(columns, rows, size);
+    const addressPlane = createAddressTexture(columns, rows, size, width, height);
     if (!addressPlane) {
       this.zoneCount = 0;
       this.cubeCount = 0;
@@ -172,24 +197,24 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
     }
     this.labelTexture = addressPlane.texture;
 
-    // Twenty five-foot cube tiers need twenty-one shared horizontal planes.
+    // Ten ten-foot cube tiers need eleven shared horizontal planes.
     for (let tier = 0; tier <= CUBE_TIERS; tier++) {
       const dx = tier * cubeDrift;
       const dy = -tier * cubeRise;
       const major = tier % (LEVEL_FEET / CUBE_FEET) === 0;
       drawStroke(grids, { width: 1, color: ZONE_COLOR, alpha: major ? 0.55 : 0.26 }, () => {
         for (let column = 0; column <= columns; column++) {
-          const x = originX + column * size + dx;
+          const x = originX + Math.min(column * size, width) + dx;
           grids.moveTo(x, originY + dy).lineTo(x, originY + height + dy);
         }
         for (let row = 0; row <= rows; row++) {
-          const y = originY + row * size + dy;
+          const y = originY + Math.min(row * size, height) + dy;
           grids.moveTo(originX + dx, y).lineTo(originX + width + dx, y);
         }
       });
     }
 
-    // Ten addressable 10-foot bands, each containing two five-foot cube tiers.
+    // Each addressable ten-foot band is one readable wireframe cube tier.
     for (let level = 0; level < ZONE_LEVELS; level++) {
       const tier = level * (LEVEL_FEET / CUBE_FEET);
       const dx = tier * cubeDrift;
@@ -218,8 +243,8 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
     drawStroke(grids, { width: 1, color: ZONE_COLOR, alpha: 0.5 }, () => {
       for (let column = 0; column <= columns; column++) {
         for (let row = 0; row <= rows; row++) {
-          const x = originX + column * size;
-          const y = originY + row * size;
+          const x = originX + Math.min(column * size, width);
+          const y = originY + Math.min(row * size, height);
           grids.moveTo(x, y).lineTo(x + topDx, y + topDy);
         }
       }

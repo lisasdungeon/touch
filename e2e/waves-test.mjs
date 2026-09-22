@@ -187,10 +187,10 @@ await checkAsync("floor filter hides waves on other storeys", async () => {
   T.viewer.floorFilter = 0; // ground floor band
   T.viewer.flushWaves();
   const grid = await roomGrid(T.viewer);
-  assert.ok(![...grid.active].some((point) => point.dataset.y === "5"), "F2 wave filtered out");
+  assert.ok(![...grid.active].some((point) => point.dataset.y === "3"), "F2 wave filtered out");
   T.viewer.floorFilter = null;
   T.viewer.flushWaves();
-  assert.ok([...grid.active].some((point) => point.dataset.y === "5"), "visible again with no filter");
+  assert.ok([...grid.active].some((point) => point.dataset.y === "3"), "visible again with no filter");
   T.viewer.close({ force: true }).catch(() => {});
 });
 

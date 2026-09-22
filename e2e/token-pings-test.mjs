@@ -45,8 +45,8 @@ await check("every token ping carries its zone, level, and static cube address",
     assert.match(ping.address.cube, /^\d+[A-Z]+-L\d{2}-T\d{2}$/);
   }
   assert.deepStrictEqual(pings.find((ping) => ping.id === "token.tok-hero").address, {
-    zone: "6F", row: 6, column: "F", level: 1, levelElevation: 0,
-    cubeTier: 1, cube: "6F-L01-T01",
+    zone: "3C", row: 3, column: "C", level: 1, levelElevation: 0,
+    cubeTier: 1, cube: "3C-L01-T01",
   });
 });
 
@@ -65,6 +65,45 @@ await check("the automatic global cadence schedules every visible token", () => 
   T.pinger.phase = interval;
   const due = T.pinger.tick();
   for (const id of visibleTokenIds) assert.ok(due.includes(id), `${id} not scheduled`);
+});
+
+await check("movement inside the room immediately emits an addressed ping", async () => {
+  game.socket.outbox.length = 0;
+  const hero = sampleScene.tokens.get("tok-hero");
+  await hero.update({ x: 650, y: 550 });
+  const ping = game.socket.outbox.at(-1)?.payload?.pings?.[0];
+  assert.strictEqual(ping?.id, "token.tok-hero");
+  assert.strictEqual(ping?.movement, true);
+  assert.deepStrictEqual(ping?.address, {
+    zone: "3D", row: 3, column: "D", level: 1, levelElevation: 0,
+    cubeTier: 1, cube: "3D-L01-T01",
+  });
+});
+
+await check("lights, sounds, walls, and moving tiles also trip the lattice", async () => {
+  const cases = [
+    [sampleScene.lights.get("lit-torch"), { x: 800 }, "light.lit-torch"],
+    [sampleScene.sounds.get("snd-water"), { y: 700 }, "sound.snd-water"],
+    [sampleScene.walls.get("wl-1"), { c: [900, 500, 1100, 500] }, "wall.wl-1"],
+    [sampleScene.tiles.get("tile-platform"), { x: 1000 }, "tile.tile-platform"],
+  ];
+  for (const [doc, change, id] of cases) {
+    game.socket.outbox.length = 0;
+    await doc.update(change);
+    const ping = game.socket.outbox.at(-1)?.payload?.pings?.[0];
+    assert.strictEqual(ping?.id, id);
+    assert.strictEqual(ping?.movement, true);
+    assert.ok(ping?.address, `${id} movement must resolve inside the room`);
+  }
+});
+
+await check("movement outside the room and non-positional updates stay silent", async () => {
+  const hero = sampleScene.tokens.get("tok-hero");
+  game.socket.outbox.length = 0;
+  await hero.update({ name: "Hero Renamed" });
+  assert.strictEqual(game.socket.outbox.length, 0);
+  await hero.update({ x: -100 });
+  assert.strictEqual(game.socket.outbox.length, 0);
 });
 
 T.pinger.stop();

@@ -44,6 +44,26 @@ await check("canvasTearDown removes every owned surface", async () => {
   assert.strictEqual(canvas.stage.listenerCount("pointerdown"), 0);
 });
 
+await check("one failed surface cannot block waypoints, pathways, or rings", async () => {
+  const { ZoneGridLayer } = await import("../touch/scripts/zoneGridLayer.js?release=0.1.12");
+  const { ensureTouchCanvasLayers, teardownTouchCanvasLayers } = await import("../touch/scripts/canvasLayers.js?release=0.1.12");
+  const original = ZoneGridLayer.prototype.draw;
+  const logged = console.error;
+  ZoneGridLayer.prototype.draw = async () => { throw new Error("simulated zone failure"); };
+  console.error = () => {};
+  try {
+    await ensureTouchCanvasLayers();
+    assert.strictEqual(canvas.touchZones, undefined, "failed layer should be discarded");
+    for (const property of ["touchHypergrid", "touchPathways", "touchWaypoints", "touchRings"]) {
+      assert.ok(canvas[property]?.parent, `${property} was blocked by the failed zone layer`);
+    }
+  } finally {
+    console.error = logged;
+    ZoneGridLayer.prototype.draw = original;
+    await teardownTouchCanvasLayers();
+  }
+});
+
 const failed = results.filter(([status]) => status === "FAIL");
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 if (failed.length) process.exit(1);

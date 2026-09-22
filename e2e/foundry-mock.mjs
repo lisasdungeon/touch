@@ -86,25 +86,33 @@ class MockDoc {
   get y() { return this.data.y ?? 0; }
   get width() { return this.data.width ?? 1; }
   get height() { return this.data.height ?? 1; }
+  get hidden() { return this.data.hidden ?? false; }
+  get c() { return this.data.c; }
   async update(patch) {
     for (const [k, v] of Object.entries(patch)) this.data[k] = v;
-    for (const h of Hooks.events[`update${cap(this.kind)}`] ?? []) h(this, patch);
+    const position = this.object?.center ?? this.object?.source ?? this.object?.sound ?? this.object?.midpoint;
+    if (position && patch.x !== undefined) position.x = patch.x;
+    if (position && patch.y !== undefined) position.y = patch.y;
+    if (this.object?.midpoint && Array.isArray(patch.c)) {
+      this.object.midpoint.x = (patch.c[0] + patch.c[2]) / 2;
+      this.object.midpoint.y = (patch.c[1] + patch.c[3]) / 2;
+    }
+    for (const h of Hooks.events[hookName(this.kind)] ?? []) h(this, patch);
   }
   getFlag(scope, key) { return this.flags[scope]?.[key]; }
   async unsetFlag(scope, key) {
     if (this.flags[scope]) delete this.flags[scope][key];
-    const hookName = `update${cap(this.kind)}`;
-    for (const h of Hooks.events[hookName] ?? []) h(this, { flags: { [scope]: this.flags[scope] } });
+    for (const h of Hooks.events[hookName(this.kind)] ?? []) h(this, { flags: { [scope]: this.flags[scope] } });
   }
   async setFlag(scope, key, value) {
     this.flags[scope] = this.flags[scope] ?? {};
     this.flags[scope][key] = value;
     // Real Foundry fires the document's update hook on every setFlag/update.
-    const hookName = `update${cap(this.kind)}`;
-    for (const h of Hooks.events[hookName] ?? []) h(this, { flags: { [scope]: this.flags[scope] } });
+    for (const h of Hooks.events[hookName(this.kind)] ?? []) h(this, { flags: { [scope]: this.flags[scope] } });
   }
 }
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const hookName = (kind) => `update${({ light: "AmbientLight", sound: "AmbientSound" }[kind] ?? cap(kind))}`;
 
 class MockScene {
   constructor() {
@@ -114,6 +122,7 @@ class MockScene {
     this.lights = new Collection();
     this.sounds = new Collection();
     this.walls = new Collection();
+    this.tiles = new Collection();
   }
 }
 
@@ -154,6 +163,9 @@ function buildSampleScene() {
   mk("sound", scene.sounds, { id: "snd-water", name: "Water", elevation: 0, x: 300, y: 300, hidden: false }, {
     object: { sound: { x: 300, y: 300, active: true } },
     sound: { get: () => ({ detectionModes: { audio: "GB" } }) },
+  });
+  mk("tile", scene.tiles, { id: "tile-platform", name: "Moving Platform", elevation: 0, x: 900, y: 900, hidden: false }, {
+    object: { center: { x: 900, y: 900 }, visible: true },
   });
   mk("wall", scene.walls, { id: "wl-1", name: "Wall A", elevation: 0, x: 800, y: 500, c: [700, 500, 900, 500] }, {
     object: { midpoint: { x: 800, y: 500 } },
@@ -280,6 +292,9 @@ globalThis.PIXI = {
     constructor(options, style) {
       this.text = typeof options === "object" ? options.text : options;
       this.style = typeof options === "object" ? options.style : style;
+      if (PIXI.VERSION.startsWith("7") && typeof this.style?.stroke === "object") {
+        throw new Error("PIXI 7 text stroke must be a color value");
+      }
       this.anchor = { set() {} };
       this.position = { set: (x, y) => { this.x = x; this.y = y; } };
       this.eventMode = "auto";
