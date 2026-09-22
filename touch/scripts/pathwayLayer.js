@@ -50,26 +50,25 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
     this.paths.removeChildren().forEach((c) => c.destroy({ children: true }));
     const scene = canvas.scene;
     if (!scene) return;
-    const d = canvas.dimensions;
     for (const pw of getPathways(scene)) {
       const holder = new PIXI.Container();
-      holder.position.set(-d.sceneX, -d.sceneY);
+      holder.position.set(0, 0);
       this.paths.addChild(holder);
 
       const rail = new PIXI.Graphics();
       const pts = samplePathway(pw);
       const [ax, ay, bx, by] = pw.c;
-      rail.moveTo(ax - d.sceneX, ay - d.sceneY)
-        .lineTo(bx - d.sceneX, by - d.sceneY)
+      rail.moveTo(ax, ay)
+        .lineTo(bx, by)
         .stroke({ width: 3, color: PW_COLOR, alpha: 0.35, cap: "round" });
       // Sample ticks: one small node per emitter point.
       for (const p of pts) {
-        rail.circle(p.x - d.sceneX, p.y - d.sceneY, 3)
+        rail.circle(p.x, p.y, 3)
           .fill({ color: PW_COLOR, alpha: 0.8 });
       }
       // Endpoint handles.
       for (const [hx, hy] of [[ax, ay], [bx, by]]) {
-        rail.circle(hx - d.sceneX, hy - d.sceneY, 6)
+        rail.circle(hx, hy, 6)
           .fill({ color: PW_COLOR, alpha: 0.9 })
           .stroke({ width: 1, color: 0x0a0f14, alpha: 0.8 });
       }
@@ -78,7 +77,7 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
       // Endpoint drag handles.
       for (const end of [0, 1]) {
         const hit = new PIXI.Container();
-        hit.position.set(pw.c[end * 2] - d.sceneX, pw.c[end * 2 + 1] - d.sceneY);
+        hit.position.set(pw.c[end * 2], pw.c[end * 2 + 1]);
         hit.eventMode = "static";
         hit.cursor = "grab";
         hit.hitArea = new PIXI.Rectangle(-10, -10, 20, 20);
@@ -122,10 +121,9 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
     this.preview?.destroy();
     this.preview = null;
     if (!at || !this._pending) return;
-    const d = canvas.dimensions;
     const g = new PIXI.Graphics();
-    g.moveTo(this._pending.x - d.sceneX, this._pending.y - d.sceneY)
-      .lineTo(at.x - d.sceneX, at.y - d.sceneY)
+    g.moveTo(this._pending.x, this._pending.y)
+      .lineTo(at.x, at.y)
       .stroke({ width: 2, color: PW_COLOR, alpha: 0.6, cap: "round" });
     this.preview = g;
     this.addChild(g);
@@ -162,9 +160,8 @@ export class PathwayLayer extends foundry.canvas.layers.CanvasLayer {
   async #onDragEnd(event, id, end) {
     if (!this._drag || this._drag.id !== id || this._drag.end !== end) return;
     this._drag = null;
-    const d = canvas.dimensions;
-    const nx = event.global.x + d.sceneX;
-    const ny = event.global.y + d.sceneY;
+    const nx = event.global.x;
+    const ny = event.global.y;
     const pw = getPathways(canvas.scene).find((p) => p.id === id);
     if (!pw) return;
     const c = [...pw.c];

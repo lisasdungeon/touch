@@ -80,7 +80,6 @@ export function registerRuntime(loadViewerClass, loadHubClass) {
       const Viewer = await loadViewerClass();
       touch.viewer = new Viewer();
       await touch.viewer.render({ force: true });
-      if (canvas.touchRings) canvas.touchRings.active = true;
     };
     touch.openHub = async () => {
       if (!game.user.isGM) return ui.notifications.error("TOUCH.Errors.GmOnly");
@@ -94,7 +93,6 @@ export function registerRuntime(loadViewerClass, loadHubClass) {
     touch.closeViewer = () => {
       touch.viewer?.close?.({ force: true }).catch(() => {});
       touch.viewer = null;
-      if (canvas.touchRings) canvas.touchRings.active = false;
     };
 
     touch.setEmitterConfig = async (id, patch) => {

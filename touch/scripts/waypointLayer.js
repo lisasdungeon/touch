@@ -49,11 +49,10 @@ export class WaypointLayer extends foundry.canvas.layers.CanvasLayer {
     this.waypoints.removeChildren().forEach((c) => c.destroy({ children: true }));
     const scene = canvas.scene;
     if (!scene) return;
-    const d = canvas.dimensions;
     for (const wp of getWaypoints(scene)) {
       const cfg = wp.config ?? {};
       const holder = new PIXI.Container();
-      holder.position.set(wp.x - d.sceneX, wp.y - d.sceneY);
+      holder.position.set(wp.x, wp.y);
       holder.eventMode = "static";
       holder.cursor = "grab";
       holder.wpId = wp.id;
@@ -128,9 +127,8 @@ export class WaypointLayer extends foundry.canvas.layers.CanvasLayer {
   async #onDragEnd(event, id) {
     if (!this._drag || this._drag.id !== id) return;
     this._drag = null;
-    const d = canvas.dimensions;
-    const nx = event.global.x + d.sceneX;
-    const ny = event.global.y + d.sceneY;
+    const nx = event.global.x;
+    const ny = event.global.y;
     const wp = getWaypoints(canvas.scene).find((w) => w.id === id);
     if (!wp) return;
     if (Math.hypot(nx - wp.x, ny - wp.y) < 3) {

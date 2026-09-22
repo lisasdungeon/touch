@@ -57,7 +57,7 @@ export const sceneCell = sceneWaypoint;
 
 function latticePosition(x, y, z) {
   const step = 10;
-  return { x: `${(x - GRID_AXIS / 2) * step}px`, y: `${(GRID_AXIS / 2 - y) * step}px`, z: `${(z - GRID_AXIS / 2) * step}px` };
+  return { x: `${x * step}px`, y: `${(GRID_AXIS - y) * step}px`, z: `${(z - GRID_AXIS / 2) * step}px` };
 }
 
 function place(element, x, y, z) {

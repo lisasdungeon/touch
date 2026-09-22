@@ -13,9 +13,10 @@
   position: absolute;
   left: 50%;
   top: 52%;
-  width: 0;
-  height: 0;
-  contain: layout style;
+  width: calc(var(--touch-cell) * 20);
+  height: calc(var(--touch-cell) * 20);
+  margin-left: calc(var(--touch-cell) * -10);
+  margin-top: calc(var(--touch-cell) * -10);
   transform: rotateX(-25deg) rotateY(38deg);
   transform-style: preserve-3d;
 }
@@ -26,7 +27,7 @@
   box-sizing: border-box;
   width: var(--touch-cell);
   height: var(--touch-cell);
-  border: 1px solid rgb(94 234 212 / 20%);
+  border: 1px solid rgb(94 234 212 / 48%);
   background: transparent;
   transform: translate3d(var(--tx), var(--ty), var(--tz));
   transform-style: preserve-3d;
@@ -38,7 +39,7 @@
   box-sizing: border-box;
   width: var(--touch-cell);
   height: var(--touch-cell);
-  border: 1px solid rgb(94 234 212 / 16%);
+  border: 1px solid rgb(94 234 212 / 38%);
   background: transparent;
   content: "";
   transform-style: preserve-3d;
@@ -64,8 +65,8 @@
   width: 2px;
   height: 2px;
   border-radius: 50%;
-  background: rgb(94 234 212 / 32%);
-  box-shadow: 0 0 2px rgb(94 234 212 / 24%);
+  background: rgb(94 234 212 / 58%);
+  box-shadow: 0 0 3px rgb(94 234 212 / 42%);
   transform: translate3d(var(--tx), var(--ty), var(--tz)) translate(-50%, -50%);
   transform-style: preserve-3d;
 }

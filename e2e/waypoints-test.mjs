@@ -31,10 +31,10 @@ async function checkAsync(name, fn) {
 console.log("== Loading module ==");
 await import("../touch/scripts/touch.js");
 for (const fn of Hooks.events.init ?? []) fn();
-assert.strictEqual(CONFIG.Canvas.layers.touchWaypoints?.group, "interface", "waypoint layer registered during init");
 await setupCanvasLayers();
+assert.strictEqual(canvas.touchWaypoints?.parent, canvas.interface, "waypoint surface attached to live interface group");
 for (const fn of Hooks.events.ready ?? []) fn();
-for (const fn of Hooks.events.canvasReady ?? []) fn();
+for (const fn of Hooks.events.canvasReady ?? []) await fn();
 await window.touch.openViewer(); // frames need a rendered viewer to ingest into
 
 const wpMod = await import("../touch/scripts/waypoints.js");
@@ -59,6 +59,8 @@ await checkAsync("waypoint tool arms, consumes a map click, and draws the stored
   assert.ok(placed, "scene click persisted a waypoint at the canvas coordinate");
   assert.strictEqual(placed.config.mode, "both", "new waypoint exposes a configurable ping mode");
   assert.strictEqual(canvas.touchWaypoints.waypoints.children.length, 1, "placed waypoint has a live scene marker");
+  assert.strictEqual(canvas.touchWaypoints.waypoints.children[0].x, 640, "marker uses the canvas X coordinate without a second offset");
+  assert.strictEqual(canvas.touchWaypoints.waypoints.children[0].y, 420, "marker uses the canvas Y coordinate without a second offset");
   assert.strictEqual(stopped, true, "placement click does not leak into other canvas tools");
   await tool.onChange({}, false);
   assert.strictEqual(canvas.touchWaypoints.armed, false, "toolbar deactivation disarms placement");

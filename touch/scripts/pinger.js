@@ -252,7 +252,7 @@ export class Pinger {
     for (const p of payload.pings) {
       // Louder rings live longer, min 1s.
       const life = Math.max(1, (p.intensity / 100) * (payload.settings.duration ?? 4));
-      const origin = { x: p.x - d.sceneX, y: p.y - d.sceneY };
+      const origin = { x: p.x, y: p.y };
 
       // 1) canvas ring sprite — arc sweep when the emitter has a cone,
       //    ring weight from the emitter's feedback tone

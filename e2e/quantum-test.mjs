@@ -48,14 +48,17 @@ await check("CSS defines wireframe cubes and corner waypoints without WebGL or o
   assert.doesNotMatch(hyperCss, /canvas|webgl|rotate.*animation/i);
 });
 
-await check("the zero-size 3D root does not paint-clip its transformed room", async () => {
+await check("the 3D root has a visible box and does not flatten its transformed room", async () => {
   const rootRule = hyperCss.match(/\.touch-hypergrid-space\s*\{[^}]+\}/s)?.[0] ?? "";
-  assert.doesNotMatch(rootRule, /contain:[^;]*paint/, "paint containment clips the 3D children");
+  assert.doesNotMatch(rootRule, /contain:/, "containment can flatten or clip the 3D children");
+  assert.doesNotMatch(rootRule, /width:\s*0|height:\s*0/, "zero-size transform roots render unreliably");
+  assert.match(rootRule, /width:\s*calc\(var\(--touch-cell\) \* 20\)/);
 });
 
 console.log("== Scene and viewer surfaces ==");
 await check("the fixed wireframe lattice is a live Foundry canvas layer", async () => {
   assert.ok(canvas.touchHypergrid, "registered scene layer");
+  assert.strictEqual(canvas.touchHypergrid.parent, canvas.interface, "scene lattice is attached to the live interface group");
   assert.strictEqual(canvas.touchHypergrid.waypointCount, 21 ** 3, "every physical corner has a waypoint");
   assert.strictEqual(canvas.touchHypergrid.children.length, 2, "laser lattice and memory graphics");
 });

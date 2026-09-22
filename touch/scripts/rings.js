@@ -9,7 +9,8 @@ export class RingLayer extends foundry.canvas.layers.CanvasLayer {
   constructor() {
     super();
     this.sprites = [];
-    this._active = false;
+    this._active = true;
+    this._frame = null;
     /** Channel filter: "both" | "sound" | "light" | null (all). */
     this.channel = null;
   }
@@ -52,6 +53,22 @@ export class RingLayer extends foundry.canvas.layers.CanvasLayer {
     const t = performance.now();
     const weight = tone === "low" ? 4 : tone === "high" ? 1 : 2;
     this.sprites.push({ g, t, duration, maxRadius, color, angle, fov, weight });
+    this.#startDrawing();
+  }
+
+  #startDrawing() {
+    if (this._frame !== null) return;
+    const draw = () => {
+      this._frame = null;
+      this.refresh();
+      if (!this.sprites.length) return;
+      if (globalThis.requestAnimationFrame) this._frame = requestAnimationFrame(draw);
+      else {
+        this._frame = setTimeout(draw, 16);
+        this._frame.unref?.();
+      }
+    };
+    draw();
   }
 
   /** Compatibility shim for the old positional signature. */
@@ -91,6 +108,11 @@ export class RingLayer extends foundry.canvas.layers.CanvasLayer {
 
   /** @override */
   tearDown() {
+    if (this._frame !== null) {
+      globalThis.cancelAnimationFrame?.(this._frame);
+      clearTimeout(this._frame);
+      this._frame = null;
+    }
     this.sprites.forEach((s) => s.g?.destroy());
     this.sprites = [];
     return super.tearDown();

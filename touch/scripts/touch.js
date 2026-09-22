@@ -1,10 +1,5 @@
 /** Touch module bootstrap: settings, layers, sockets, and canvas lifecycle. */
 import { MODULE_ID, SOCKET_NAME, SOCKET_MESSAGES, DEFAULTS, CAMERAS, SETTINGS } from "./constants.js";
-import { RingLayer } from "./rings.js";
-import { WaypointLayer } from "./waypointLayer.js";
-import { PathwayLayer } from "./pathwayLayer.js";
-import { HypergridLayer } from "./hypergridLayer.js";
-import { ZoneGridLayer } from "./zoneGridLayer.js";
 import { collectWalls } from "./emitters.js";
 import { registerHelpers } from "./helpers.js";
 import { registerRuntime } from "./runtime.js";
@@ -12,6 +7,7 @@ import { bindCanvasInteractions, unbindCanvasInteractions } from "./canvasIntera
 
 let viewerClassPromise;
 let hubClassPromise;
+let canvasLayersPromise;
 
 async function loadViewerClass() {
   viewerClassPromise ??= import("./viewer.js").then(({ SonarViewer }) => SonarViewer);
@@ -21,6 +17,11 @@ async function loadViewerClass() {
 async function loadHubClass() {
   hubClassPromise ??= import("./hub.js").then(({ SonarHub }) => SonarHub);
   return hubClassPromise;
+}
+
+async function loadCanvasLayers() {
+  canvasLayersPromise ??= import("./canvasLayers.js");
+  return canvasLayersPromise;
 }
 
 function addSceneControlGroup(controls) {
@@ -62,12 +63,6 @@ function addSceneControlGroup(controls) {
 Hooks.once("init", () => {
   console.debug("Touch | init");
   Hooks.on("getSceneControlButtons", addSceneControlGroup);
-  const layers = CONFIG.Canvas.layers;
-  if (layers?.touchRings === undefined) layers.touchRings = { layerClass: RingLayer, group: "effects" };
-  if (layers?.touchWaypoints === undefined) layers.touchWaypoints = { layerClass: WaypointLayer, group: "interface" };
-  if (layers?.touchPathways === undefined) layers.touchPathways = { layerClass: PathwayLayer, group: "interface" };
-  if (layers?.touchHypergrid === undefined) layers.touchHypergrid = { layerClass: HypergridLayer, group: "interface" };
-  if (layers?.touchZones === undefined) layers.touchZones = { layerClass: ZoneGridLayer, group: "interface" };
   registerHelpers();
   game.touch = { viewer: null, hub: null, pinger: null, cameras: null };
   const register = (key, data) => game.settings.register(MODULE_ID, key, data);
@@ -127,7 +122,14 @@ Hooks.once("ready", () => {
   refresh?.unref?.();
 });
 
-Hooks.on("canvasReady", () => {
+Hooks.on("canvasReady", async () => {
+  try {
+    const { ensureTouchCanvasLayers } = await loadCanvasLayers();
+    await ensureTouchCanvasLayers();
+  } catch (error) {
+    console.error("Touch | Live canvas surfaces failed to initialize", error);
+    ui.notifications?.error("Touch | Live scene overlay failed to initialize. Check the console for details.");
+  }
   if (game.user.isGM) window.touch?.pinger?.start();
   if (window.touch?.viewer?.rendered) window.touch.viewer.render();
   window.touch?.wavefield?.setWalls(canvas.scene?.id, collectWalls(canvas.scene));
@@ -147,5 +149,6 @@ Hooks.on("updateScene", (scene, changes) => {
 Hooks.on("canvasTearDown", () => {
   unbindCanvasInteractions();
   window.touch?.pinger?.stop();
+  canvasLayersPromise?.then(({ teardownTouchCanvasLayers }) => teardownTouchCanvasLayers());
 });
 registerRuntime(loadViewerClass, loadHubClass);

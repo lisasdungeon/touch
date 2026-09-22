@@ -244,19 +244,35 @@ globalThis.canvas = {
 globalThis.PIXI = {
   VERSION: "8.0.0",
   Container: class {
-    constructor() { this.children = []; this.position = { set() {} }; this.destroyed = false; this.eventMode = "auto"; this.cursor = ""; this.hitArea = null; this.listeners = new Map(); }
-    addChild(c) { this.children.push(c); return c; }
-    removeChildren() { const c = this.children; this.children = []; return c; }
-    destroy() { this.destroyed = true; this.children = []; }
+    constructor() {
+      this.children = [];
+      this.position = { set: (x, y) => { this.x = x; this.y = y; } };
+      this.destroyed = false; this.eventMode = "auto"; this.cursor = ""; this.hitArea = null; this.listeners = new Map();
+    }
+    addChild(c) { c.parent?.removeChild?.(c); this.children.push(c); c.parent = this; return c; }
+    removeChild(c) { this.children = this.children.filter((child) => child !== c); c.parent = null; return c; }
+    removeChildren() { const c = this.children; this.children = []; for (const child of c) child.parent = null; return c; }
+    destroy() { this.destroyed = true; this.removeChildren(); }
+    sortChildren() { this.children.sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0)); }
     on(name, fn) { const listeners = this.listeners.get(name) ?? []; listeners.push(fn); this.listeners.set(name, listeners); return this; }
     off(name, fn) { this.listeners.set(name, (this.listeners.get(name) ?? []).filter((listener) => listener !== fn)); return this; }
     async emit(name, ...args) { return Promise.all((this.listeners.get(name) ?? []).map((listener) => listener(...args))); }
     listenerCount(name) { return (this.listeners.get(name) ?? []).length; }
   },
   Graphics: class {
-    constructor() { this.instructions = []; this.position = { set() {} }; this.destroyed = false; }
-    moveTo() { return this; } lineTo() { return this; } closePath() { return this; }
-    arc() { return this; } circle() { return this; } fill() { return this; } stroke() { return this; }
+    constructor() {
+      this.instructions = [];
+      this.position = { set: (x, y) => { this.x = x; this.y = y; } };
+      this.destroyed = false;
+    }
+    moveTo(x, y) { this.instructions.push(["moveTo", x, y]); return this; }
+    lineTo(x, y) { this.instructions.push(["lineTo", x, y]); return this; }
+    closePath() { this.instructions.push(["closePath"]); return this; }
+    arc(...args) { this.instructions.push(["arc", ...args]); return this; }
+    circle(...args) { this.instructions.push(["circle", ...args]); return this; }
+    fill(style) { this.instructions.push(["fill", style]); return this; }
+    stroke(style) { this.instructions.push(["stroke", style]); return this; }
+    clear() { this.instructions = []; return this; }
     destroy() { this.destroyed = true; }
   },
   Text: class {
@@ -283,6 +299,8 @@ globalThis.PIXI = {
 };
 canvas.stage = new PIXI.Container();
 canvas.stage.worldTransform = { applyInverse: (point) => ({ x: point.x, y: point.y }) };
+canvas.interface = new PIXI.Container();
+canvas.stage.addChild(canvas.interface);
 canvas.grid = { isGridless: false, isSquare: true, size: 100 };
 
 globalThis.Hooks = {
@@ -356,14 +374,19 @@ function makeAppBase() {
 
 const AppV2 = makeAppBase();
 globalThis.foundry = {
-  utils: { Color: class { constructor(v) { this.v = v; } } },
+  utils: {
+    Color: class { constructor(v) { this.v = v; } },
+    mergeObject: (base, patch) => ({ ...(base ?? {}), ...patch }),
+  },
   applications: { api: { ApplicationV2: AppV2, HandlebarsApplicationMixin: (base) => base } },
   canvas: {
     layers: {
       CanvasLayer: class extends PIXI.Container {
         static get layerOptions() { return {}; }
+        constructor() { super(); this.options = this.constructor.layerOptions; }
         async _draw() {}
         async draw() { await this._draw(); return this; }
+        async tearDown() { this.removeChildren(); }
       },
     },
   },
@@ -437,15 +460,10 @@ function makeWallHeightSim() {
 globalThis.WallHeightSim = makeWallHeightSim();
 WallHeightSim.registerHooks();
 
-/** Instantiate the Touch canvas layers the module registered (test helper). */
+/** Attach the same direct interface surfaces used in Foundry. */
 globalThis.setupCanvasLayers = async () => {
-  for (const key of ["touchWaypoints", "touchPathways", "touchHypergrid", "touchZones"]) {
-    const entry = CONFIG.Canvas.layers?.[key];
-    if (entry?.layerClass && !canvas[key]) {
-      canvas[key] = new entry.layerClass();
-      await canvas[key].draw();
-    }
-  }
+  const { ensureTouchCanvasLayers } = await import("../touch/scripts/canvasLayers.js");
+  return ensureTouchCanvasLayers();
 };
 
 export { document, sampleScene, i18n, hbs, gameRef as game };

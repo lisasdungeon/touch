@@ -177,7 +177,7 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
       const dx = tier * cubeDrift;
       const dy = -tier * cubeRise;
       const major = tier % (LEVEL_FEET / CUBE_FEET) === 0;
-      drawStroke(grids, { width: 1, color: ZONE_COLOR, alpha: major ? 0.2 : 0.1 }, () => {
+      drawStroke(grids, { width: 1, color: ZONE_COLOR, alpha: major ? 0.55 : 0.26 }, () => {
         for (let column = 0; column <= columns; column++) {
           const x = originX + column * size + dx;
           grids.moveTo(x, originY + dy).lineTo(x, originY + height + dy);
@@ -195,7 +195,7 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
       const dx = tier * cubeDrift;
       const dy = -tier * cubeRise;
       const elevation = level * LEVEL_FEET;
-      const alpha = Math.max(0.38, 0.82 - level * 0.045);
+      const alpha = Math.max(0.5, 0.92 - level * 0.045);
       const plane = new PIXI.Sprite(addressPlane.texture);
       plane.position.set(originX + dx, originY + dy);
       plane.width = addressPlane.width;
@@ -215,7 +215,7 @@ export class ZoneGridLayer extends foundry.canvas.layers.CanvasLayer {
 
     const topDx = CUBE_TIERS * cubeDrift;
     const topDy = -CUBE_TIERS * cubeRise;
-    drawStroke(grids, { width: 1, color: ZONE_COLOR, alpha: 0.2 }, () => {
+    drawStroke(grids, { width: 1, color: ZONE_COLOR, alpha: 0.5 }, () => {
       for (let column = 0; column <= columns; column++) {
         for (let row = 0; row <= rows; row++) {
           const x = originX + column * size;

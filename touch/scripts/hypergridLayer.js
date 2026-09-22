@@ -15,8 +15,8 @@ function project(x, y, z, step, dimensions) {
   const width = GRID_AXIS * step * 1.32;
   const height = GRID_AXIS * step * 0.5;
   return {
-    x: ((dimensions.sceneWidth - width) / 2) + (x + z * 0.32) * step,
-    y: ((dimensions.sceneHeight + height) / 2) + (z * 0.16 - y * 0.34) * step,
+    x: dimensions.sceneX + ((dimensions.sceneWidth - width) / 2) + (x + z * 0.32) * step,
+    y: dimensions.sceneY + ((dimensions.sceneHeight + height) / 2) + (z * 0.16 - y * 0.34) * step,
   };
 }
 
@@ -84,7 +84,7 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
     for (let x = 0; x <= GRID_AXIS; x++) for (let y = 0; y <= GRID_AXIS; y++) {
       line(project(x, y, 0, step, dimensions), project(x, y, GRID_AXIS, step, dimensions));
     }
-    graphics.stroke({ width: 1, color: LASER, alpha: 0.18, cap: "round" });
+    graphics.stroke({ width: 1, color: LASER, alpha: 0.5, cap: "round" });
   }
 
   #drawWaypoints(graphics, step, dimensions) {
@@ -93,7 +93,7 @@ export class HypergridLayer extends foundry.canvas.layers.CanvasLayer {
       const point = project(x, y, z, step, dimensions);
       graphics.circle(point.x, point.y, radius);
     }
-    graphics.fill({ color: LASER, alpha: 0.22 });
+    graphics.fill({ color: LASER, alpha: 0.62 });
   }
 
   #drawMemory(graphics, step, dimensions) {

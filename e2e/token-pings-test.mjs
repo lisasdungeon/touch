@@ -4,9 +4,9 @@ import assert from "node:assert";
 import { game, sampleScene } from "./foundry-mock.mjs";
 
 const results = [];
-function check(name, fn) {
+async function check(name, fn) {
   try {
-    fn();
+    await fn();
     console.log(`  PASS  ${name}`);
     results.push(["PASS", name]);
   } catch (error) {
@@ -18,6 +18,7 @@ function check(name, fn) {
 await import("../touch/scripts/touch.js");
 for (const fn of Hooks.events.init ?? []) fn();
 for (const fn of Hooks.events.ready ?? []) fn();
+await setupCanvasLayers();
 const T = window.touch;
 const visibleTokenIds = [...sampleScene.tokens]
   .filter((token) => token.object?.visible)
@@ -25,7 +26,7 @@ const visibleTokenIds = [...sampleScene.tokens]
   .sort();
 
 console.log("== Token sonar emission ==");
-check("a full pulse includes every player-visible token", () => {
+await check("a full pulse includes every player-visible token", () => {
   game.socket.outbox.length = 0;
   T.pinger.pulse({ broadcast: true, local: false });
   const message = game.socket.outbox.at(-1)?.payload;
@@ -34,7 +35,7 @@ check("a full pulse includes every player-visible token", () => {
   assert.ok(!tokenIds.includes("token.tok-hidden"), "GM-hidden tokens must not leak to players");
 });
 
-check("every token ping carries its zone, level, and static cube address", () => {
+await check("every token ping carries its zone, level, and static cube address", () => {
   const pings = game.socket.outbox.at(-1).payload.pings.filter((ping) => ping.kind === "token");
   assert.ok(pings.length > 0);
   for (const ping of pings) {
@@ -49,7 +50,17 @@ check("every token ping carries its zone, level, and static cube address", () =>
   });
 });
 
-check("the automatic global cadence schedules every visible token", () => {
+await check("token pings draw expanding rings on the live scene", async () => {
+  canvas.touchRings.sprites.length = 0;
+  T.pinger.pulse({ broadcast: false, local: true });
+  await new Promise((resolve) => setTimeout(resolve, 24));
+  assert.ok(canvas.touchRings.sprites.length >= visibleTokenIds.length);
+  assert.ok(canvas.touchRings.sprites.some(({ g }) => g.instructions.some(([type]) => type === "stroke")));
+  assert.strictEqual(canvas.touchRings.sprites[0].g.x, 500, "ring keeps the token's canvas X coordinate");
+  assert.strictEqual(canvas.touchRings.sprites[0].g.y, 500, "ring keeps the token's canvas Y coordinate");
+});
+
+await check("the automatic global cadence schedules every visible token", () => {
   const interval = Number(game.settings.get("touch", "pingInterval")) || 6;
   T.pinger.phase = interval;
   const due = T.pinger.tick();

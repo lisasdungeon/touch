@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.7 — 2026-09-22
+
+- Replaced unreliable custom canvas-layer registration with lazy, direct
+  attachment to Foundry's live `canvas.interface` group during `canvasReady`.
+- Added the missing triggered render loop for expanding token ping rings; scene
+  pings now draw immediately and remain active without opening the Viewer.
+- Corrected waypoint, pathway, ring, room, and zone coordinates on padded maps
+  by keeping live PIXI graphics in Foundry canvas coordinates.
+- Rebuilt the Viewer room around a real 200 × 200-pixel 3D transform root
+  instead of a zero-size contained element that rendered blank.
+- Increased the static room, cube, waypoint, level, and zone line contrast so
+  the 4D structure is visibly distinct from the scene's native grid.
+- Added lifecycle coverage that begins with no Touch surfaces and proves
+  `canvasReady` creates, draws, attaches, activates, and tears down all five.
+
 ## 0.1.6 — 2026-09-21
 
 - Made Waypoint and Pathway scene controls persistent placement modes and

@@ -48,10 +48,11 @@ await check("canvas positions resolve to a unique level and five-foot cube", asy
 });
 
 console.log("== Live scene overlay ==");
-await check("zone layer is registered during init in the interface group", async () => {
-  assert.strictEqual(CONFIG.Canvas.layers.touchZones?.group, "interface");
-});
 await setupCanvasLayers();
+await check("zone layer is drawn directly in Foundry's live interface group", async () => {
+  assert.strictEqual(canvas.touchZones?.parent, canvas.interface);
+  assert.ok(canvas.interface.children.includes(canvas.touchZones));
+});
 await check("ten elevation planes receive the full physical zone layout", async () => {
   const layer = canvas.touchZones;
   assert.ok(layer, "zone layer instantiated");
