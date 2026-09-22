@@ -150,7 +150,14 @@ await checkAsync("wavePhysics:false leaves the field empty", async () => {
   assert.strictEqual(T.wavefield.waves.length, 0, "no wave when disabled");
 });
 
-await checkAsync("viewer flushWaves paints rings, nodes, and rails", async () => {
+async function roomGrid(viewer) {
+  for (let index = 0; index < 100 && !viewer.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(viewer.hypergrid, "lazy cube lattice mounted");
+  await viewer.hypergrid.ready;
+  return viewer.hypergrid;
+}
+
+await checkAsync("viewer flushWaves maps fronts and rails onto 4D corner waypoints", async () => {
   await T.openViewer();
   const wf = T.wavefield;
   wf.clear();
@@ -166,14 +173,9 @@ await checkAsync("viewer flushWaves paints rings, nodes, and rails", async () =>
   await sampleScene.setFlag("touch", "pathways", list);
   wf.latticeIntensity([{ id: "pw.rail", c: [800, 0, 800, 1500], elevation: 0 }]);
   T.viewer.flushWaves();
-  const room = T.viewer.element.querySelector(".touch-room-space");
-  assert.ok(room, "room present");
-  assert.ok(room.querySelector(".touch-wave-ring"), "ring element painted");
-  assert.ok(room.querySelector(".touch-wave-echo"), "echo ring dashed class");
-  assert.ok(room.querySelector(".touch-wave-node"), "interference node painted");
-  const rail = room.querySelector(".touch-wave-rail");
-  assert.ok(rail, "rail element painted");
-  assert.ok(Number(rail.style.getPropertyValue("--glow")) > 0, "rail has glow");
+  const grid = await roomGrid(T.viewer);
+  assert.ok(grid.active.size > 10, "wavefront and rail light multiple corner waypoints");
+  assert.ok(T.viewer.element.querySelector("[data-hypergrid]"), "fixed CSS cube host present");
   // Cleanup flag for other suites
   await sampleScene.setFlag("touch", "pathways", []);
 });
@@ -184,11 +186,11 @@ await checkAsync("floor filter hides waves on other storeys", async () => {
   wf.ingestPing({ uid: "v2", x: 500, y: 500, intensity: 90, elevation: 25, config: {} });
   T.viewer.floorFilter = 0; // ground floor band
   T.viewer.flushWaves();
-  const room = T.viewer.element.querySelector(".touch-room-space");
-  assert.strictEqual(room.querySelectorAll(".touch-wave-ring").length, 0, "F1 wave filtered out");
+  const grid = await roomGrid(T.viewer);
+  assert.ok(![...grid.active].some((point) => point.dataset.y === "5"), "F2 wave filtered out");
   T.viewer.floorFilter = null;
   T.viewer.flushWaves();
-  assert.strictEqual(room.querySelectorAll(".touch-wave-ring").length, 1, "visible again with no filter");
+  assert.ok([...grid.active].some((point) => point.dataset.y === "5"), "visible again with no filter");
   T.viewer.close({ force: true }).catch(() => {});
 });
 

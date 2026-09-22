@@ -12,15 +12,6 @@
       </select>
     </span>
     <div class="touch-viewer-actions">
-      <button type="button" class="touch-quantum-btn touch-quantum-shimmer" data-action="quantumCube"
-              title="{{localize "TOUCH.Quantum.CubeHint"}}" aria-label="{{localize "TOUCH.Quantum.CubeHint"}}">
-        <span class="touch-quantum-glow"></span>
-        <span class="touch-quantum-cube">
-          {{#each quantumFaces}}
-            <span class="touch-quantum-face {{face}}" data-face="{{cam}}" title="{{label}}">{{glyph}}</span>
-          {{/each}}
-        </span>
-      </button>
       <button type="button" data-action="scan"><i class="fa-solid fa-satellite-dish"></i> {{localize "TOUCH.Viewer.Scan"}}</button>
       <button type="button" data-action="calibrate"><i class="fa-solid fa-ruler-combined"></i> {{localize "TOUCH.Viewer.Calibrate"}}</button>
       <button type="button" data-action="togglePause"><i class="fa-solid fa-pause"></i> {{localize "TOUCH.Viewer.Paused"}}</button>
@@ -28,47 +19,17 @@
   </header>
 
   <div class="touch-room" data-room>
-    {{! Reconstructed 4D room, styled entirely from camera CSS variables }}
-    <div class="touch-room-space" data-room-space>
-      <div class="touch-room-grid"></div>
-      {{! Track trails: fading dotted position history per tracked object }}
-      <div class="touch-track-trails"></div>
-      {{! Wave physics: lattice rails glowing with incident wave intensity }}
-      <div class="touch-wave-rails"></div>
-      {{! Wave physics: expanding wavefront rings in plan projection }}
-      <div class="touch-wave-rings"></div>
-      {{! Wave physics: interference dots (constructive glow / destructive nodes) }}
-      <div class="touch-wave-nodes"></div>
-      {{! Vertical extent bands: walls/lights with Levels or Wall Height ranges }}
-      <div class="touch-extent-bands">
-        {{#each bands}}
-          <div class="touch-extent-band" data-key="{{key}}" data-kind="{{kind}}" title="{{label}}"
-               style="--u: {{u}}; --b: {{bottom}}%; --bh: {{top}}%; color: {{accent}}"></div>
-        {{/each}}
-      </div>
-      {{! Floor guide lines, one per occupied storey (Levels-aware) }}
-      {{#each floors}}
-        <div class="touch-floor-line" data-floor="{{storey}}"
-             style="--floor-offset: {{offset}}%" data-positive="{{#if (gt storey 0)}}true{{/if}}">
-          <span class="touch-floor-label">F{{storey}}</span>
-        </div>
-      {{/each}}
-      <div class="touch-room-axes">
-        <span class="axis axis-x">x</span>
-        <span class="axis axis-y">y</span>
-        <span class="axis axis-z">z</span>
-        <span class="axis axis-t">t</span>
-      </div>
-      {{! Quantum orbit controls: rotate the 3D stage in space }}
-      <div class="touch-quantum-orbit">
-        <button type="button" data-action="orbitLeft" title="{{localize "TOUCH.Quantum.OrbitLeft"}}">↺</button>
-        <button type="button" data-action="orbitRight" title="{{localize "TOUCH.Quantum.OrbitRight"}}">↻</button>
-        <button type="button" data-action="orbitTilt" title="{{localize "TOUCH.Quantum.OrbitTilt"}}">⤢</button>
-        <button type="button" data-action="orbitReset" title="{{localize "TOUCH.Quantum.OrbitReset"}}">⌂</button>
-      </div>
+    {{! One 5-foot wireframe CSS cube per spatial grid cell; corners hold memory. }}
+    <div class="touch-hypergrid" data-hypergrid aria-label="{{localize "TOUCH.HyperGrid.Aria"}}"></div>
+    <output class="touch-room-dimensions" data-hypergrid-dimensions>{{localize "TOUCH.HyperGrid.Dimensions"}}</output>
+    <div class="touch-room-axes" aria-hidden="true">
+      <span class="axis axis-x">{{localize "TOUCH.HyperGrid.AxisX"}}</span>
+      <span class="axis axis-y">{{localize "TOUCH.HyperGrid.AxisY"}}</span>
+      <span class="axis axis-z">{{localize "TOUCH.HyperGrid.AxisZ"}}</span>
+      <span class="axis axis-t">{{localize "TOUCH.HyperGrid.AxisT"}}</span>
     </div>
     {{#unless levelsOn}}
-      <span class="touch-room-note" title="{{localize "TOUCH.Viewer.LevelsHint"}}">⌁ {{storeyHeight}}u / floor</span>
+      <span class="touch-room-note" title="{{localize "TOUCH.Viewer.LevelsHint"}}">{{storeyHeight}}u / floor</span>
     {{/unless}}
   </div>
 

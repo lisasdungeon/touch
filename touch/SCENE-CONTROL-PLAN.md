@@ -1,7 +1,6 @@
 # Scene Control Fix Plan
 
-Status: Implemented and locally verified; awaiting clean Foundry-install
-validation and explicit release authorization.
+Status: Reopened after `0.1.3` did not render a dedicated scene-control icon.
 
 ## Objective
 
@@ -9,30 +8,24 @@ Restore the Touch scene-control entry in Foundry VTT 12 through 14.
 
 ## Evidence
 
-- The current `getSceneControlButtons` hook creates a standalone custom
-  `touch` control group. The active Dev Bible identifies the existing Token
-  controls as the supported v13/v14 extension point for module action tools.
-- The standalone group also omits a required numeric `order` field and targets
-  `touchRings` instead of the canonical Token controls layer.
-- The action tools omit `toggle: false` and do not guard their `onChange`
-  handlers against a deactivation event.
+- The `0.1.3` Token-controls integration did not supply the dedicated
+  scene-control icon expected by Touch.
+- The Dev Bible's dedicated-group pattern requires `order: 100`,
+  `layer: "tokens"`, ready-time registration, and a forced controls refresh.
 
 ## Planned Change
 
-1. Register Touch action tools during `init` on the existing Token controls:
-   `token` for legacy arrays and `tokens` for v13+/v14 records.
-2. Use the current `onChange` action path, mark one-shot tools non-toggle, and
-   ignore deactivation events.
-3. Add the GM hub only for GM users; retain player-safe tools for all users.
-4. Preserve the legacy array and current record control layouts without
-   mutating the rendered toolbar outside the hook.
+1. Restore the stable dedicated `touch` control group for array and record
+   schemas, with the required group order and Token layer.
+2. Register the control hook at ready and trigger one controls refresh.
+3. Keep one-shot action semantics and GM-only hub gating.
 
 ## Verification
 
-1. Completed: extended scene-control E2E coverage for v12 and v13+/v14,
-   including activation, deactivation, duplicate-hook, and GM-gating paths.
-2. Completed: full E2E suite and offline Foundry API validation.
-3. Pending: clean Foundry install validation before publishing `0.1.3`.
+1. Extend scene-control E2E coverage for the dedicated group in v12 and
+   v13+/v14, including activation, deactivation, duplicate-hook, and GM paths.
+2. Run the full E2E suite and Dev Bible API/manifest/package gates.
+3. Validate a clean Foundry install before publishing `0.1.4`.
 
 ## References
 

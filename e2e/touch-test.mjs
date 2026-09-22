@@ -89,10 +89,9 @@ check("viewer context: floors and floor options", () => {
 check("viewer shows six camera tiles", () => {
   assert.strictEqual(document.querySelectorAll(".touch-cam").length, 6);
 });
-check("room floor lines rendered for occupied storeys", () => {
-  const floors = [...document.querySelectorAll(".touch-floor-line")].map((el) => el.dataset.floor);
-  assert.ok(floors.includes("0"), "ground floor line");
-  assert.ok(floors.includes("1"), "F1 line");
+check("viewer renders the fixed 4D wireframe room", () => {
+  assert.ok(document.querySelector("[data-hypergrid]"), "CSS cube lattice host");
+  assert.match(document.querySelector("[data-hypergrid-dimensions]").textContent, /20 × 20 × 20/);
 });
 
 // ------------------------------------------------------------ ping pipeline
@@ -127,14 +126,16 @@ check("wall ping uses Wall Height fallback / elevation", () => {
   assert.ok(found, "wall frame exists");
   assert.strictEqual(found.storey, 0);
 });
-check("viewer flush paints blips into DOM", () => {
+await checkAsync("viewer flush paints cameras and activates 4D corner waypoints", async () => {
   window.touch.viewer.flush();
   assert.ok(document.querySelectorAll(".touch-cam .touch-blip").length > 0, "camera blips");
-  assert.ok(document.querySelectorAll(".touch-room-blip").length > 0, "room blips");
+  for (let index = 0; index < 100 && !window.touch.viewer.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await window.touch.viewer.hypergrid.ready;
+  assert.ok(window.touch.viewer.hypergrid.active.size > 0, "memory waypoints activated");
 });
-check("blip titles carry floor info", () => {
-  const titles = [...document.querySelectorAll(".touch-room-blip")].map((el) => el.title);
-  assert.ok(titles.some((t) => t.includes("floor 1")), `titles: ${titles.join(" | ")}`);
+check("balcony contact occupies a different physical height", () => {
+  const heights = new Set([...window.touch.viewer.hypergrid.active].map((point) => point.dataset.y));
+  assert.ok(heights.size > 1, "multiple vertically stacked cube levels");
 });
 
 // ---------------------------------------------------------------- GM hub
@@ -183,18 +184,17 @@ await checkAsync("set Wall Height range through API", async () => {
 
 // ------------------------------------------------------- floor filter flow
 console.log("== Floor filter ==");
-check("filter selector change filters room blips to band", () => {
+await checkAsync("filter limits the 4D room to one physical elevation band", async () => {
   const sel = document.querySelector(".touch-floor-select");
   const v = window.touch.viewer;
   v.floorFilter = 1;
   v.flush();
-  const roomBlips = [...document.querySelectorAll(".touch-room-blip")];
-  assert.strictEqual(roomBlips.length, 1, "only balcony sniper on F1");
-  assert.strictEqual(roomBlips[0].dataset.floor, "1");
+  await v.hypergrid.ready;
+  assert.ok([...v.hypergrid.active].every((point) => ["2", "3"].includes(point.dataset.y)), "only F1 corners remain");
   // reset
   v.floorFilter = null;
   v.flush();
-  assert.ok(document.querySelectorAll(".touch-room-blip").length > 1, "all floors restored");
+  assert.ok(new Set([...v.hypergrid.active].map((point) => point.dataset.y)).size > 1, "all floors restored");
 });
 
 // ---------------------------------------------------------------- socket in
@@ -220,32 +220,35 @@ check("calibrate clears frames and filter", () => {
 
 // ---------------------------------------------------------- scene controls
 console.log("== Scene controls ==");
-check("Touch action tools attach to Token controls (v13+/v14 Record API)", () => {
-  const controls = { tokens: { name: "tokens", tools: { select: { name: "select" } } } };
+check("Touch scene control group is registered for v13+/v14 record controls", () => {
+  const controls = {};
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  const tools = Object.values(controls.tokens.tools);
+  const group = controls.touch;
+  assert.ok(group, "dedicated Touch control group registered");
+  assert.strictEqual(group.order, 100, "group has a stable toolbar order");
+  assert.strictEqual(group.layer, "tokens", "group targets the Token control layer");
+  const tools = Object.values(group.tools);
   assert.ok(tools.some((t) => t.name === "touch-hub"), "hub button present");
   assert.ok(tools.some((t) => t.name === "touch-viewer"), "viewer button present");
   assert.ok(tools.some((t) => t.name === "touch-waypoint"), "waypoint button present");
   assert.ok(tools.some((t) => t.name === "touch-pathway"), "pathway button present");
-  assert.ok(!controls.touch, "does not register an unsupported standalone control group");
-  const hub = controls.tokens.tools["touch-hub"];
+  const hub = group.tools["touch-hub"];
   assert.strictEqual(hub.button, true, "hub is an action button, not a toggle tool");
   assert.strictEqual(hub.toggle, false, "hub cannot become an active toggle");
-  assert.strictEqual(hub.order, 2, "hub follows the pre-existing Token tool");
+  assert.strictEqual(hub.order, 1, "hub has a stable tool order");
   assert.strictEqual(typeof hub.onChange, "function", "hub carries onChange (v13+ handler)");
   assert.strictEqual(typeof hub.onClick, "function", "hub keeps onClick (v12 handler)");
 });
 
 await checkAsync("hub tool ignores deactivation and opens only on activation", async () => {
-  const controls = { tokens: { name: "tokens", tools: {} } };
+  const controls = {};
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
   const originalOpenHub = window.touch.openHub;
   let opens = 0;
   window.touch.openHub = async () => { opens += 1; };
   try {
-    await controls.tokens.tools["touch-hub"].onChange({}, false);
-    await controls.tokens.tools["touch-hub"].onChange({}, true);
+    await controls.touch.tools["touch-hub"].onChange({}, false);
+    await controls.touch.tools["touch-hub"].onChange({}, true);
   } finally {
     window.touch.openHub = originalOpenHub;
   }
@@ -253,32 +256,32 @@ await checkAsync("hub tool ignores deactivation and opens only on activation", a
 });
 
 check("v12 legacy array controls still supported", () => {
-  const controls = [{ name: "token", tools: [] }];
+  const controls = [];
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
   for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-  const token = controls.find((control) => control?.name === "token");
-  assert.ok(token.tools.some((tool) => tool.name === "touch-hub"), "hub added to the legacy Token controls");
-  assert.ok(token.tools.some((tool) => tool.name === "touch-viewer"), "viewer added to the legacy Token controls");
-  assert.strictEqual(token.tools.filter((tool) => tool.name === "touch-viewer").length, 1, "repeated hook calls do not duplicate tools");
+  const groups = controls.filter((control) => control?.name === "touch");
+  assert.strictEqual(groups.length, 1, "repeated hook calls do not duplicate the Touch group");
+  assert.ok(groups[0].tools.some((tool) => tool.name === "touch-hub"), "hub added to the legacy Touch group");
+  assert.ok(groups[0].tools.some((tool) => tool.name === "touch-viewer"), "viewer added to the legacy Touch group");
 });
 
-check("record controls accept the legacy Token key and safely ignore missing Token controls", () => {
-  const legacyRecord = { token: { name: "token", tools: {} } };
-  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(legacyRecord);
-  assert.ok(legacyRecord.token.tools["touch-viewer"], "legacy record key receives the viewer");
+check("record controls create the group without a pre-existing Token control", () => {
+  const controls = {};
+  for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
+  assert.ok(controls.touch.tools["touch-viewer"], "viewer is available without a Token control record");
   assert.doesNotThrow(() => {
-    for (const fn of Hooks.events.getSceneControlButtons ?? []) fn({});
-  }, "unrelated control records are left unchanged");
+    for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(null);
+  }, "absent control data is ignored safely");
 });
 
 check("non-GM controls omit the GM hub without hiding player-safe actions", () => {
   const previousGM = game.user.isGM;
   game.user.isGM = false;
   try {
-    const controls = { tokens: { name: "tokens", tools: {} } };
+    const controls = {};
     for (const fn of Hooks.events.getSceneControlButtons ?? []) fn(controls);
-    assert.ok(!controls.tokens.tools["touch-hub"], "GM hub is not registered for players");
-    assert.ok(controls.tokens.tools["touch-viewer"], "viewer remains available");
+    assert.ok(!controls.touch.tools["touch-hub"], "GM hub is not registered for players");
+    assert.ok(controls.touch.tools["touch-viewer"], "viewer remains available");
   } finally {
     game.user.isGM = previousGM;
   }

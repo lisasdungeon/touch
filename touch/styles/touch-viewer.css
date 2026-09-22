@@ -65,70 +65,6 @@
   border-radius: 1px;
 }
 
-/* Viewer: identified blips carry a small id dot. */
-.touch-room-blip.touch-identified::before {
-  content: "";
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #fbbf24;
-  box-shadow: 0 0 4px #fbbf24;
-}
-
-/* Node memory: a remembered blip gets a heat halo (teal → amber → red) whose
-   strength tracks the cell's current heat, fading as history goes stale. */
-.touch-room-blip {
-  --mem-heat: 0;
-}
-.touch-room-blip::after {
-  content: "";
-  position: absolute;
-  inset: -5px;
-  border-radius: inherit;
-  border: 1px solid var(--mem-color, transparent);
-  opacity: var(--mem-heat, 0);
-  pointer-events: none;
-}
-
-/* Interference dots: bright where fronts reinforce, dark nulls where they
-   cancel. Amp drives size/intensity; age fades them as the field dissipates. */
-.touch-wave-node {
-  position: absolute;
-  left: calc(50% + var(--u, 0) * 1%);
-  top: calc(50% + var(--v, 0) * 1%);
-  width: calc(4px + var(--amp, 0.2) * 10px);
-  height: calc(4px + var(--amp, 0.2) * 10px);
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    color-mix(in srgb, #7df9ff calc(var(--amp, 0.2) * 120%), transparent) 0%,
-    transparent 70%);
-  box-shadow: 0 0 calc(10px * var(--amp, 0.2)) color-mix(in srgb, #7df9ff 60%, transparent);
-  opacity: calc(var(--amp, 0.2) * (1 - min(1, var(--age, 0) / 3)));
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-}
-.touch-wave-node.touch-wave-null {
-  background: radial-gradient(circle,
-    rgba(2, 6, 12, 0.9) 0%,
-    color-mix(in srgb, var(--touch-accent) 25%, transparent) 45%,
-    transparent 75%);
-  box-shadow: none;
-}
-.touch-floor-line[data-floor="0"] {
-  border-top-style: solid;
-  border-top-color: color-mix(in srgb, var(--touch-accent) 45%, transparent);
-}
-.touch-floor-label {
-  position: absolute;
-  right: 2px;
-  top: -14px;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  opacity: 0.6;
-}
 .touch-room-note {
   position: absolute;
   bottom: 6px;
@@ -142,8 +78,7 @@
 }
 
 /* Directional cone wedge behind a blip (hidden for omnidirectional 360°) */
-.touch-blip::before,
-.touch-room-blip::before {
+.touch-blip::before {
   content: "";
   position: absolute;
   left: 50%;
@@ -161,27 +96,11 @@
   mask: radial-gradient(circle, black 0 40%, transparent 78%);
   pointer-events: none;
 }
-.touch-blip[data-omni="true"]::before,
-.touch-room-blip[data-omni="true"]::before { display: none; }
+.touch-blip[data-omni="true"]::before { display: none; }
 
 /* Sound vs light tinting */
-.touch-blip[data-mode="sound"],
-.touch-room-blip[data-mode="sound"] { color: #a78bfa; }
-.touch-blip[data-mode="light"],
-.touch-room-blip[data-mode="light"] { color: #fbbf24; }
-
-/* Surface traces: hollow segment blips drawing the exact chord of pathway
-   crossing an object. A short bar at the chord fragment's midpoint. */
-.touch-room-blip[data-trace="true"] {
-  border-radius: 2px;
-  width: 3px;
-  height: calc(var(--d, 1) * 9px);
-  background: none;
-  box-shadow: none;
-  border: 1px solid currentColor;
-  opacity: calc(var(--s, 0.5) * (1 - min(1, var(--age, 0) / 6)) * 1.4);
-}
-.touch-room-blip[data-trace="true"]::before { display: none; }
+.touch-blip[data-mode="sound"] { color: #a78bfa; }
+.touch-blip[data-mode="light"] { color: #fbbf24; }
 
 .touch-blip {
   position: absolute;
@@ -263,3 +182,36 @@
   opacity: 0.75;
 }
 
+/* ------------------------------------ fixed 4D wireframe cube room */
+
+.touch-room {
+  min-height: 340px;
+  background: radial-gradient(circle at 50% 45%, #0c2632 0%, #040a10 72%);
+}
+
+.touch-room-dimensions {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--touch-accent) 42%, transparent);
+  border-radius: 999px;
+  background: rgb(4 10 16 / 72%);
+  color: var(--touch-accent);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.touch-room-axes {
+  z-index: 2;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.touch-room-axes .axis::before { content: ""; }
+.axis-x { color: #fb6d6d; }
+.axis-y { color: #70eb95; }
+.axis-z { color: #86a2ff; }
+.axis-t { color: #d6a7ff; }

@@ -176,9 +176,9 @@ await checkAsync("floor selector filter survives a full flush", async () => {
   viewer.flush();
   assert.ok(viewer.element);
 });
-await checkAsync("viewer bands + floor lines coexist with zero pings", async () => {
+await checkAsync("fixed 4D room host remains available with zero pings", async () => {
   await window.touch.viewer.render();
-  assert.ok(window.touch.viewer.element.querySelector(".touch-extent-bands"));
+  assert.ok(window.touch.viewer.element.querySelector("[data-hypergrid]"));
 });
 
 console.log("== E. every hub + viewer action through the DOM ==");

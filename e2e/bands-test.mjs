@@ -1,8 +1,8 @@
 /**
  * e2e/bands-test.mjs — vertical extent bands in the room view.
  * Verifies band computation from Levels/Wall Height ranges, precedence,
- * light "hangs from ceiling" fallback, infinite clamping, DOM rendering
- * (template + live reconcile), and band removal when flags clear.
+ * light "hangs from ceiling" fallback, infinite clamping, true 3D line
+ * primitives (template + live refresh), and band removal when flags clear.
  */
 import "./foundry-mock.mjs";
 import assert from "node:assert";
@@ -36,35 +36,37 @@ for (const fn of Hooks.events.ready ?? []) fn();
 await window.touch.openViewer();
 const viewer = window.touch.viewer;
 
-// #bands is private; exercise it through the reconcile output in flush().
-const domBands = () => [...viewer.element.querySelectorAll(".touch-extent-band")];
-const bandByKey = (key) => domBands().find((el) => el.dataset.key === key);
+async function roomGrid() {
+  for (let index = 0; index < 100 && !viewer.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(viewer.hypergrid, "lazy cube lattice mounted");
+  await viewer.hypergrid.ready;
+  return viewer.hypergrid;
+}
+const bandByKey = (key) => viewer.getBands().find((band) => band.key === key);
 
 console.log("== Extent bands in the room view ==");
 await checkAsync("wall band from Wall Height extent", async () => {
   await window.touch.setEmitterWallHeight("wall.wl-1", 10, "bottom");
   await window.touch.setEmitterWallHeight("wall.wl-1", 30, "top");
   viewer.flush();
-  const el = bandByKey("wall.wl-1");
-  assert.ok(el, "band element exists");
-  assert.strictEqual(el.dataset.kind, "wall");
-  // bottom=10u -> --b = 14% (one storey span); height = 2 storeys = 28%
-  assert.strictEqual(el.style.getPropertyValue("--b"), "14.00%");
-  assert.strictEqual(el.style.getPropertyValue("--bh"), "28.00%");
-  assert.match(el.title, /Wall .+ — Wall Height 10u→30u/);
+  const band = bandByKey("wall.wl-1");
+  assert.ok(band, "wall band exists");
+  assert.strictEqual(band.kind, "wall");
+  assert.strictEqual(band.bottomElevation, 10);
+  assert.strictEqual(band.topElevation, 30);
+  assert.match(band.label, /Wall .+ — Wall Height 10u→30u/);
 });
 
 await checkAsync("light band hangs below a Wall Height ceiling", async () => {
   const light = sampleScene.lights.get("lit-torch");
   await light.setFlag("wall-height", "top", 20);
   viewer.flush();
-  const el = bandByKey("light.lit-torch");
-  assert.ok(el, "light band exists");
-  assert.strictEqual(el.dataset.kind, "light");
-  // top=20 with no bottom -> hangs 20-10=10 -> bottom storey 1 (14%), 1 storey tall
-  assert.strictEqual(el.style.getPropertyValue("--b"), "14.00%");
-  assert.strictEqual(el.style.getPropertyValue("--bh"), "14.00%");
-  assert.match(el.title, /Torch — Wall Height 10u→20u/);
+  const band = bandByKey("light.lit-torch");
+  assert.ok(band, "light band exists");
+  assert.strictEqual(band.kind, "light");
+  assert.strictEqual(band.bottomElevation, 10);
+  assert.strictEqual(band.topElevation, 20);
+  assert.match(band.label, /Torch — Wall Height 10u→20u/);
 });
 
 await checkAsync("Levels range wins over Wall Height", async () => {
@@ -72,10 +74,10 @@ await checkAsync("Levels range wins over Wall Height", async () => {
   wall.flags.levels = { rangeBottom: 0, rangeTop: 20 };
   try {
     viewer.flush();
-    const el = bandByKey("wall.wl-1");
-    assert.strictEqual(el.style.getPropertyValue("--b"), "0.00%");
-    assert.strictEqual(el.style.getPropertyValue("--bh"), "28.00%");
-    assert.match(el.title, /Levels 0u→20u/);
+    const band = bandByKey("wall.wl-1");
+    assert.strictEqual(band.bottomElevation, 0);
+    assert.strictEqual(band.topElevation, 20);
+    assert.match(band.label, /Levels 0u→20u/);
   } finally {
     delete wall.flags.levels;
   }
@@ -92,16 +94,19 @@ await checkAsync("fully infinite extents produce no band", async () => {
 await checkAsync("bands update live through flush without re-render", async () => {
   await window.touch.setEmitterWallHeight("wall.wl-1", 0, "bottom");
   viewer.flush();
-  const el = bandByKey("wall.wl-1");
-  assert.ok(el, "band re-created on next flush");
-  assert.strictEqual(el.style.getPropertyValue("--b"), "0.00%"); // ground floor
-  assert.strictEqual(el.style.getPropertyValue("--bh"), "14.00%"); // clamped 1 storey
-  // light band still live from its earlier flag
+  const band = bandByKey("wall.wl-1");
+  assert.ok(band, "band re-created on next flush");
+  assert.strictEqual(band.bottomElevation, 0);
+  assert.strictEqual(band.topElevation, 10);
+  // Light band still live from its earlier flag.
   assert.ok(bandByKey("light.lit-torch"), "light band persists");
 });
 
-check("template render includes band container", () => {
-  assert.ok(viewer.element.querySelector(".touch-extent-bands"), "container present");
+await checkAsync("bands activate vertically stacked waypoints in the 4D room", async () => {
+  const grid = await roomGrid();
+  viewer.flush();
+  assert.ok([...grid.active].some((point) => point.style.getPropertyValue("--touch-cell-color") === "#94a3b8"), "wall extent reaches memory corners");
+  assert.ok(viewer.element.querySelector("[data-hypergrid]"), "CSS cube host present");
 });
 
 // ------------------------------------------------------------------ summary

@@ -35,26 +35,25 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
 - **Junction waypoints** — where two pathways cross, a shared junction
   waypoint (amber cross-in-diamond) is created automatically and removed if
   the crossing disappears. Move a line and its junctions follow.
-- **3D sonar lattice** — extend the scene grid into a full 3D lattice from
-  the GM Hub: *W × D* plan gridlines replicated on every storey (height).
-  Each gridline is a real pathway — it pings, traces, and passes through the
-  whole pipeline — and every **same-storey** crossing becomes a junction
-  waypoint node automatically. Crossings on different storeys never create
-  nodes (elevation-gated), so the lattice reads as a true 3D cage of sonar
-  rails with nodes where rails of one floor meet. Regenerate or clear at any
-  time; hand-drawn pathways are never touched. Hard-capped at 600 lines.
+- **Live 4D wireframe room** — Touch renders a fixed 100 × 100 × 100-foot
+  room directly on the active scene as laser-thin horizontal, vertical, and
+  depth lines. The same room appears in the viewer as **8,000 stacked CSS
+  wireframe cubes**: one real cube for every five-foot X/Y/Z grid cell. The
+  9,261 shared cube corners are the room's waypoint nodes; they retain and
+  display the scene's decaying memory. Twenty five-second temporal states
+  form the fourth axis without materializing 185,220 duplicate DOM nodes.
+- **3D sonar lattice** — optional pathway rails can still be generated from
+  the GM Hub. Each gridline is a real pathway — it pings, traces, and passes
+  through the whole pipeline — and same-storey crossings become junction
+  waypoint nodes automatically. Hand-drawn pathways are never touched.
 - **Six perimeter cameras** — top/bottom/left/right/front/back, each projecting
   pings into its own frame via CSS custom properties (`--u`, `--v`, `--s`,
   `--el`, `--az`, `--d`).
 - **Sonar Viewer** — a dedicated window: reconstructed 4D room plus six camera
   tiles, scan/pause/calibrate controls.
-- **Quantum Portal** — the six-camera array rendered as a real 3D CSS cube
-  (`preserve-3d`, one face per camera) in both the viewer and the GM Hub.
-  Click a face to snap the room stage to that camera's angle; orbit buttons
-  and drag-to-orbit rotate the whole reconstruction in space, every floor
-  becomes a translucent storey plane, and blips lift off the stage by
-  elevation. Ships with the portal glow pulse, quantum hue shimmer, and
-  glass window chrome (all `prefers-reduced-motion` safe).
+- **Quantum Portal** — the GM Hub keeps its six-camera CSS cube launcher
+  (`preserve-3d`, one face per camera) for opening the viewer. The room itself
+  is fixed: it is built from stacked cubes, not from an orbitable container.
 - **Per-emitter ping frequency** — any object can ring on its own cadence
   instead of waiting for the global pulse; fast emitters are staggered so they
   don't blink in unison, while rate-0 objects all ring together on the global
@@ -110,12 +109,10 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   with its whole history — continues under the new image instead of forking
   a new contact. Optionally renames the track in the same stroke; also
   re-registers a track that Forget All wiped.
-- **Track trails** — every active track's position history is drawn in the
-  room view as a **fading dotted path**: older fixes dim and shrink toward
-  the trail's tail, the newest fix pulses as the trail head, and each
-  continuing path keeps its own stable hue so multiple contacts never blur
-  together. Trails honor the floor selector, cap at 24 dots per track (16
-  freshest tracks), and clear with Forget All.
+- **Track trails** — every active track's history is retained at its corner
+  waypoints: older fixes dim, the newest fix is the trail head, and each
+  continuing path keeps a stable hue. Trails honor the floor selector, cap
+  at 24 corners per track (16 freshest tracks), and clear with Forget All.
 - **Marching groups** — tokens moving **together** (freshest fixes within
   ±30u/s speed and ±15° heading) are folded into **one shared group
   contact** with a stable id: a marching patrol reads as a single contact,
@@ -138,16 +135,10 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   payload, tint the viewer blips' blink rate, and change ring weight on the
   game canvas (4 / 2 / 1 px strokes) so each object returns visually distinct
   feedback.
-- **Wave physics** — every ping becomes a true expanding wavefront in the
-  room view: it attenuates with distance (inverse-√ falloff), **dissipates**
-  over its lifetime, and **bounces off walls** as dashed echo fronts that
-  reflect back into the room. Where fronts overlap they **interfere**:
-  bright cyan dots where fronts reinforce, dark nodal nulls where an echo
-  meets an outgoing front anti-phase. **Lattice gridlines glow with incident
-  intensity** as fronts sweep across them, with a directional bias showing
-  which way the wave is travelling. All computed deterministically on each
-  client from the ping stream — zero extra network traffic. Toggle physics
-  and reflections, tune wave speed, and fire a test pulse from the GM Hub.
+- **Wave physics** — every ping becomes an expanding wavefront in the room:
+  it attenuates, dissipates, and bounces off walls. Wavefronts, interference,
+  and pathway rails light their corresponding memory corners in the fixed
+  wireframe room. All computation is deterministic on each client.
 - **GM Hub** — per-object intensity sliders, mute toggles, pan-to-object,
   bulk set/mute, **bulk verticals** (apply one Levels floor range or Wall
   Height extent to every selected kind at once), ping-all, rate/tone editing,
@@ -158,16 +149,14 @@ four sides) watch the echoes and reconstruct the scene into a **4D room**
   a fresh sonar ping. With **theripper93's Levels** active, the hub also edits
   each token/wall's floor range (`rangeBottom` / `rangeTop`) directly, and
   with **Wall Height** active it edits wall/light extents (`top` / `bottom`).
-- **Floor-aware projection** — pings are placed on their floor storey in the
-  viewer: Levels floor ranges win, otherwise elevation ÷ the "grid units per
-  floor storey" setting. Dashed floor guide lines (F0, F1, …) appear for every
-  occupied storey in the room view. A **floor selector** in the viewer header
-  filters the sonogram to one elevation band (`F2 · 20–30u`) or shows all floors.
+- **Floor-aware projection** — pings are placed in vertically stacked cubes:
+  Levels floor ranges win, otherwise elevation ÷ the "grid units per floor
+  storey" setting. A **floor selector** filters the sonogram to one elevation
+  band (`F2 · 20–30u`) or shows all floors.
 - **Vertical extent bands** — walls and lights with Levels floor ranges or
-  Wall Height extents are drawn as translucent colored columns in the room
-  view at their plan position, spanning their real vertical extent (slate for
-  walls, the light's own tint for lights). Levels wins over Wall Height, and
-  bands update live as flags change.
+  Wall Height extents light the memory corners through their real vertical
+  span (slate for walls, the light's own tint for lights). Levels wins over
+  Wall Height, and bands update live as flags change.
 - **Canvas rings** — optional expanding ring sprites drawn on the game canvas
   so everyone sees the pings in-world.
 - **Socketed** — the GM clock broadcasts pings so every client stays in phase.
@@ -206,7 +195,7 @@ window.touch.emitters();         // current echogenic objects
 
 - Wall occlusion of camera sight (echo shadows behind interior walls)
 - Audio ping feedback (WebAudio, intensity → dB)
-- 3D CSS transforms for the room (true z from token elevation)
+- Adjustable fixed-room span beyond the current 100-foot cube
 - Per-camera projection modes (orthographic / perspective)
 
 ## License

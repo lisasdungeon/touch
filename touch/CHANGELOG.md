@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- Added a fixed 100 × 100 × 100-foot 4D wireframe room to the active Foundry
+  scene and Sonar Viewer.
+- The Viewer lazily builds 8,000 stacked five-foot CSS cubes with laser-thin
+  edges and 9,261 shared memory-bearing corner waypoints.
+- Added a Foundry canvas lattice layer so the room is visible on the live
+  scene, not only through the GM Hub.
+- Routed ping memory, tracks, groups, waves, pathways, and vertical extents
+  into the corresponding corner waypoints; track history retains recency,
+  head state, and stable track or group color.
+- Removed the obsolete configurable WebGL W/H/D room and orbit controls.
+
+## 0.1.4 — 2026-09-21
+
+- Restored the dedicated Touch scene-control group with the Dev Bible's
+  required order, Token layer, ready-time registration, and control refresh.
+
 ## 0.1.3 — 2026-09-21
 
 - Restored the Touch scene-control entry through the supported Token controls

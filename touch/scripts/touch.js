@@ -3,6 +3,7 @@ import { MODULE_ID, SOCKET_NAME, SOCKET_MESSAGES, DEFAULTS, CAMERAS, SETTINGS } 
 import { RingLayer } from "./rings.js";
 import { WaypointLayer } from "./waypointLayer.js";
 import { PathwayLayer } from "./pathwayLayer.js";
+import { HypergridLayer } from "./hypergridLayer.js";
 import { collectWalls } from "./emitters.js";
 import { registerHelpers } from "./helpers.js";
 import { registerRuntime } from "./runtime.js";
@@ -18,6 +19,32 @@ async function loadViewerClass() {
 async function loadHubClass() {
   hubClassPromise ??= import("./hub.js").then(({ SonarHub }) => SonarHub);
   return hubClassPromise;
+}
+
+function addSceneControlGroup(controls) {
+  const actionTools = [
+    ["touch-viewer", "TOUCH.Controls.Viewer", "fa-solid fa-display", () => window.touch?.openViewer()],
+    ["touch-waypoint", "TOUCH.Controls.Waypoint", "fa-solid fa-location-dot", () => window.touch?.armWaypointDeploy()],
+    ["touch-pathway", "TOUCH.Controls.Pathway", "fa-solid fa-route", () => window.touch?.armPathwayDraw()],
+  ];
+  if (game.user.isGM) actionTools.splice(1, 0, ["touch-hub", "TOUCH.Controls.Hub", "fa-solid fa-sliders", () => window.touch?.openHub()]);
+  const tools = actionTools.map(([name, title, icon, action]) => ({
+    name, title, icon, button: true, toggle: false, visible: true,
+    onClick: action,
+    onChange: (...args) => args.includes(false) ? undefined : action(),
+  }));
+  const group = {
+    name: "touch",
+    title: "TOUCH.Controls.Touch",
+    icon: "fa-solid fa-tower-broadcast",
+    order: 100,
+    layer: "tokens",
+    visible: true,
+    tools: Array.isArray(controls) ? tools : Object.fromEntries(tools.map((tool, index) => [tool.name, { ...tool, order: index }])),
+  };
+  if (Array.isArray(controls)) {
+    if (!controls.some((control) => control?.name === group.name)) controls.push(group);
+  } else if (controls && typeof controls === "object") controls[group.name] = group;
 }
 
 Hooks.once("init", () => {
@@ -69,30 +96,6 @@ Hooks.once("init", () => {
   register("globalIntensity", { scope: "world", config: false, type: Number, default: 60 });
   register("globalMuted", { scope: "world", config: false, type: Boolean, default: false });
 
-  Hooks.on("getSceneControlButtons", (controls) => {
-    const actionTools = [
-      ["touch-viewer", "TOUCH.Controls.Viewer", "fa-solid fa-display", () => window.touch?.openViewer()],
-      ["touch-waypoint", "TOUCH.Controls.Waypoint", "fa-solid fa-location-dot", () => window.touch?.armWaypointDeploy()],
-      ["touch-pathway", "TOUCH.Controls.Pathway", "fa-solid fa-route", () => window.touch?.armPathwayDraw()],
-    ];
-    if (game.user.isGM) actionTools.splice(1, 0, ["touch-hub", "TOUCH.Controls.Hub", "fa-solid fa-sliders", () => window.touch?.openHub()]);
-    const tools = actionTools.map(([name, title, icon, action]) => ({
-      name, title, icon, button: true, toggle: false, visible: true,
-      onClick: action,
-      onChange: (...args) => args.includes(false) ? undefined : action(),
-    }));
-    const tokenControls = Array.isArray(controls)
-      ? controls.find((control) => control?.name === "token" || control?.name === "tokens")
-      : controls?.tokens ?? controls?.token;
-    if (!tokenControls?.tools) return;
-    if (Array.isArray(tokenControls.tools)) {
-      for (const tool of tools) if (!tokenControls.tools.some((entry) => entry.name === tool.name)) tokenControls.tools.push(tool);
-      return;
-    }
-    const order = Object.keys(tokenControls.tools).length;
-    for (const [index, tool] of tools.entries()) tokenControls.tools[tool.name] ??= { ...tool, order: order + index };
-  });
-
   game.socket.on(SOCKET_NAME, (payload) => {
     if (!payload?.type) return;
     if (payload.type === SOCKET_MESSAGES.PINGS) window.touch?.pinger?.receive(payload);
@@ -100,11 +103,18 @@ Hooks.once("init", () => {
   });
 });
 
+Hooks.once("ready", () => {
+  Hooks.on("getSceneControlButtons", addSceneControlGroup);
+  const refresh = setTimeout(() => ui.controls?.render?.(true), 500);
+  refresh?.unref?.();
+});
+
 Hooks.once("canvasInit", () => {
   const layers = CONFIG.Canvas.layers;
   if (layers?.touchRings === undefined) layers.touchRings = { layerClass: RingLayer, group: "effects" };
   if (layers?.touchWaypoints === undefined) layers.touchWaypoints = { layerClass: WaypointLayer, group: "effects" };
   if (layers?.touchPathways === undefined) layers.touchPathways = { layerClass: PathwayLayer, group: "effects" };
+  if (layers?.touchHypergrid === undefined) layers.touchHypergrid = { layerClass: HypergridLayer, group: "effects" };
 });
 
 Hooks.on("canvasReady", () => {
@@ -114,6 +124,7 @@ Hooks.on("canvasReady", () => {
   window.touch?.wavefield?.clear();
   window.touch?.memory?.load(canvas.scene);
   window.touch?.tracks?.load(canvas.scene);
+  canvas.touchHypergrid?.refreshHypergrid();
   if (canvas.stage && !canvas.stage._touchDeployHooked) {
     canvas.stage.on("pointerdown", (event) => {
       const position = event.getWorldPosition?.(event.target) ?? event.global;

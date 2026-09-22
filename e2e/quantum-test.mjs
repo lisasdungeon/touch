@@ -1,26 +1,27 @@
-/**
- * e2e/quantum-test.mjs — Quantum Portal port: cube launchers (6 faces = 6
- * cameras) in viewer + hub, face-click camera presets, orbit nudges/tilt/
- * reset, drag binding, 3D stage class, blip lift variable, stylesheet
- * registration and reduced-motion guard.
- */
+/** Quantum launcher and fixed 4D CSS wireframe room integration. */
 import "./foundry-mock.mjs";
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
-import { sampleScene } from "./foundry-mock.mjs";
 
 const results = [];
-async function checkAsync(name, fn) {
+async function check(name, fn) {
   try {
     await fn();
     console.log(`  PASS  ${name}`);
     results.push(["PASS", name, null]);
-  } catch (err) {
-    console.log(`  FAIL  ${name}\n        ${err.stack.split("\n").slice(1, 3).join("\n        ")}`);
-    results.push(["FAIL", name, err]);
+  } catch (error) {
+    console.log(`  FAIL  ${name}\n        ${error.message}`);
+    results.push(["FAIL", name, error]);
   }
+}
+
+async function waitForGrid(viewer) {
+  for (let index = 0; index < 100 && !viewer.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(viewer.hypergrid, "lazy CSS lattice mounted");
+  await viewer.hypergrid.ready;
+  return viewer.hypergrid;
 }
 
 await import("../touch/scripts/touch.js");
@@ -29,106 +30,59 @@ for (const fn of Hooks.events.canvasInit ?? []) fn();
 for (const fn of Hooks.events.ready ?? []) fn();
 await setupCanvasLayers();
 const T = window.touch;
+const moduleRoot = path.join(path.dirname(url.fileURLToPath(import.meta.url)), "..", "touch");
+const hyperCss = fs.readFileSync(path.join(moduleRoot, "styles", "hypergrid.css"), "utf8");
 
-const MODULE_ROOT = path.join(path.dirname(url.fileURLToPath(import.meta.url)), "..", "touch");
-const qcss = fs.readFileSync(path.join(MODULE_ROOT, "styles", "quantum.css"), "utf8");
-
-console.log("== Stylesheet ==");
-await checkAsync("quantum.css registered in module.json (styles + hotReload)", async () => {
-  const manifest = JSON.parse(fs.readFileSync(path.join(MODULE_ROOT, "module.json"), "utf8"));
-  assert.ok(manifest.styles.includes("styles/quantum.css"), "in styles");
-  assert.ok(manifest.flags.hotReload.includes("styles/quantum.css"), "in hotReload");
+console.log("== Fixed CSS room registration ==");
+await check("manifest registers the fixed cube stylesheet", async () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(moduleRoot, "module.json"), "utf8"));
+  assert.ok(manifest.styles.includes("styles/hypergrid.css"));
+  assert.ok(manifest.flags.hotReload.includes("styles/hypergrid.css"));
 });
 
-await checkAsync("quantum.css carries the cube, glow, shimmer, glass, reduced-motion", async () => {
-  assert.match(qcss, /touch-quantum-cube/, "cube");
-  assert.match(qcss, /transform-style: preserve-3d/, "preserve-3d");
-  assert.match(qcss, /touch-quantum-glow/, "glow");
-  assert.match(qcss, /touchQuantumShimmer/, "shimmer keyframes");
-  assert.match(qcss, /backdrop-filter/, "glass window");
-  assert.match(qcss, /prefers-reduced-motion/, "reduced-motion guard");
-  // All six faces present
-  for (const face of ["front", "back", "left", "right", "top", "bottom"]) {
-    assert.match(qcss, new RegExp(`\\.touch-quantum-face\\.${face}`), `face ${face}`);
-  }
+await check("CSS defines wireframe cubes and corner waypoints without WebGL or orbit controls", async () => {
+  assert.match(hyperCss, /\.touch-hyper-cube/);
+  assert.match(hyperCss, /border: 1px solid/);
+  assert.match(hyperCss, /\.touch-hyper-waypoint/);
+  assert.match(hyperCss, /touch-hyper-memory/);
+  assert.doesNotMatch(hyperCss, /canvas|webgl|rotate.*animation/i);
 });
 
-console.log("== Cube launchers ==");
-await checkAsync("viewer renders six faces mapping exactly to CAMERAS", async () => {
-  await T.openViewer();
-  const v = T.viewer;
-  const { CAMERAS } = await import("../touch/scripts/constants.js");
-  const faces = [...v.element.querySelectorAll(".touch-quantum-face")].map((f) => f.dataset.face);
-  assert.deepStrictEqual(faces.sort(), CAMERAS.map((c) => c.id).sort());
+console.log("== Scene and viewer surfaces ==");
+await check("the fixed wireframe lattice is a live Foundry canvas layer", async () => {
+  assert.ok(canvas.touchHypergrid, "registered scene layer");
+  assert.strictEqual(canvas.touchHypergrid.waypointCount, 21 ** 3, "every physical corner has a waypoint");
+  assert.strictEqual(canvas.touchHypergrid.children.length, 2, "laser lattice and memory graphics");
 });
 
-await checkAsync("hub renders six faces and its cube opens the viewer", async () => {
+await check("Hub launcher opens the viewer while the viewer itself has no orbit controls", async () => {
   await T.openHub();
-  const hubFaces = T.hub.element.querySelectorAll(".touch-quantum-face");
-  assert.strictEqual(hubFaces.length, 6);
-  // openViewer closes and re-renders the viewer async — wait for it.
+  assert.strictEqual(T.hub.element.querySelectorAll(".touch-quantum-face").length, 6, "Hub launcher keeps six faces");
   T.hub.element.querySelector('[data-action="openQuantum"]').click();
-  for (let i = 0; i < 20 && !T.viewer?.rendered; i++) await new Promise((r) => setTimeout(r, 10));
-  assert.ok(T.viewer?.rendered, "viewer opened from hub");
+  for (let index = 0; index < 30 && !T.viewer?.rendered; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(T.viewer?.rendered, "viewer opened");
+  assert.ok(T.viewer.element.querySelector("[data-hypergrid]"));
+  assert.strictEqual(T.viewer.element.querySelector("[data-action=orbitLeft]"), null);
+  assert.strictEqual(T.viewer.element.querySelector(".touch-quantum-face"), null);
 });
 
-console.log("== Quantum 3D stage ==");
-await checkAsync("face click snaps the stage to the camera preset", async () => {
-  const v = T.viewer;
-  assert.ok(v?.rendered, "viewer is rendered (reopened by the hub cube)");
-  const stage = v.element.querySelector("[data-room-space]");
-  assert.ok(stage, "stage present");
-  v.element.querySelector("[data-face=back]").click();
-  assert.strictEqual(stage.classList.contains("touch-3d"), true, "3d class applied");
-  assert.strictEqual(stage.style.getPropertyValue("--yaw"), "180");
-  v.element.querySelector("[data-face=left]").click();
-  assert.strictEqual(stage.style.getPropertyValue("--yaw"), "-90");
-  v.element.querySelector("[data-face=front]").click();
-  assert.strictEqual(stage.style.getPropertyValue("--yaw"), "0");
+await check("viewer materializes the stacked spatial cubes and shared corners lazily", async () => {
+  const grid = await waitForGrid(T.viewer);
+  assert.strictEqual(grid.cubes.size, 20 ** 3, "one CSS cube for every five-foot spatial cell");
+  assert.strictEqual(grid.waypoints.size, 21 ** 3, "shared corner nodes avoid duplicated memory");
+  assert.strictEqual(T.viewer.element.querySelectorAll(".touch-hyper-cube").length, 20 ** 3);
+  assert.strictEqual(T.viewer.element.querySelectorAll(".touch-hyper-waypoint").length, 21 ** 3);
 });
 
-await checkAsync("orbit nudges, tilt clamps, reset restores", async () => {
-  const v = T.viewer;
-  const stage = v.element.querySelector("[data-room-space]");
-  v.element.querySelector("[data-action=orbitLeft]").click();
-  assert.strictEqual(stage.style.getPropertyValue("--yaw"), "-30");
-  v.element.querySelector("[data-action=orbitRight]").click();
-  v.element.querySelector("[data-action=orbitRight]").click();
-  assert.strictEqual(stage.style.getPropertyValue("--yaw"), "30");
-  v.element.querySelector("[data-action=orbitTilt]").click();
-  const t = Number(stage.style.getPropertyValue("--tilt"));
-  assert.ok(t > 0.35 && t <= 1, `tilt increased (${t})`);
-  v.element.querySelector("[data-action=orbitReset]").click();
-  assert.strictEqual(stage.style.getPropertyValue("--yaw"), "0");
-  assert.strictEqual(stage.style.getPropertyValue("--tilt"), "0.35");
+await check("a ping lights memory-bearing waypoints at separate elevations", async () => {
+  T.pinger.pulse({ broadcast: false, local: true });
+  const grid = await waitForGrid(T.viewer);
+  assert.ok(grid.active.size > 0, "incoming contacts activate corners");
+  const heights = new Set([...grid.active].map((point) => point.dataset.y));
+  assert.ok(heights.size > 1, "contacts map to vertically stacked cubes");
+  assert.ok([...grid.active].some((point) => point.classList.contains("touch-hyper-memory")), "memory is held by a corner waypoint");
 });
 
-await checkAsync("drag-to-orbit is bound on the room", async () => {
-  const v = T.viewer;
-  const room = v.element.querySelector("[data-room]");
-  assert.strictEqual(room.dataset.orbitBound, "true");
-});
-
-await checkAsync("room blips carry the 3D lift variable after a ping", async () => {
-  const v = T.viewer;
-  T.pinger.pulse({ broadcast: false });
-  v.flush();
-  const blips = v.element.querySelectorAll(".touch-room-blip");
-  assert.ok(blips.length > 0, "blips exist");
-  const lifted = [...blips].some((b) => b.style.getPropertyValue("--storey-z") !== "");
-  assert.ok(lifted, "at least one blip has --storey-z");
-});
-
-// Cleanup
-await T.viewer?.close();
-await T.hub?.close();
-await T.clearMemory();
-
-// ------------------------------------------------------------------ summary
-const failed = results.filter(([s]) => s === "FAIL");
+const failed = results.filter(([status]) => status === "FAIL");
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-if (failed.length) {
-  console.log("FAILED:");
-  for (const [, name, err] of failed) console.log(`  - ${name}: ${err.message}`);
-  process.exit(1);
-}
+if (failed.length) process.exit(1);

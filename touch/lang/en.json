@@ -33,6 +33,14 @@
       "BandWall": "Wall",
       "BandLight": "Light"
     },
+    "HyperGrid": {
+      "Aria": "Fixed five-foot 4D wireframe room",
+      "Dimensions": "20 × 20 × 20 spatial cubes · 20 time states · 5 ft per cube",
+      "AxisX": "X · 100 ft",
+      "AxisY": "Y · 100 ft",
+      "AxisZ": "Z · 100 ft",
+      "AxisT": "T · 100 s"
+    },
     "Hub": {
       "Title": "Sonar GM Hub",
       "Intensity": "Ping intensity",
@@ -187,13 +195,8 @@
       "MonitorsCleared": "Touch | {n} corner monitor(s) removed."
     },
     "Quantum": {
-      "CubeHint": "Quantum cube — six cameras, one portal. Click a face to snap the room to that camera.",
-      "OpenHint": "Open the Quantum Portal — the 4D sonar viewer",
-      "OrbitLeft": "Orbit left",
-      "OrbitRight": "Orbit right",
-      "OrbitTilt": "Tilt the stage",
-      "OrbitReset": "Reset view",
-      "OrbitHint": "Drag the room to orbit the 3D stage"
+      "CubeHint": "Quantum cube — six cameras, one portal.",
+      "OpenHint": "Open the Quantum Portal — the 4D sonar viewer"
     },
     "Identity": {
       "AssignTitle": "Assign Sonar Identity",

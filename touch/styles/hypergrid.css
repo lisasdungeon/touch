@@ -1,0 +1,90 @@
+/* Fixed CSS 4D room: stacked five-foot wireframe cubes and shared corners. */
+
+.touch-hypergrid {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 900px;
+  pointer-events: none;
+}
+
+.touch-hypergrid-space {
+  --touch-cell: 10px;
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 0;
+  height: 0;
+  contain: layout paint style;
+  transform: rotateX(-25deg) rotateY(38deg);
+  transform-style: preserve-3d;
+}
+
+/* One element is one real five-foot cube. Its borders are laser-thin only. */
+.touch-hyper-cube {
+  position: absolute;
+  box-sizing: border-box;
+  width: var(--touch-cell);
+  height: var(--touch-cell);
+  border: 1px solid rgb(94 234 212 / 20%);
+  background: transparent;
+  transform: translate3d(var(--tx), var(--ty), var(--tz));
+  transform-style: preserve-3d;
+}
+
+.touch-hyper-cube::before,
+.touch-hyper-cube::after {
+  position: absolute;
+  box-sizing: border-box;
+  width: var(--touch-cell);
+  height: var(--touch-cell);
+  border: 1px solid rgb(94 234 212 / 16%);
+  background: transparent;
+  content: "";
+  transform-style: preserve-3d;
+}
+
+.touch-hyper-cube::before {
+  top: 0;
+  left: calc(var(--touch-cell) - 1px);
+  transform: rotateY(90deg);
+  transform-origin: left center;
+}
+
+.touch-hyper-cube::after {
+  top: 0;
+  left: 0;
+  transform: rotateX(-90deg);
+  transform-origin: center top;
+}
+
+/* A single waypoint is shared by every cube that meets at that corner. */
+.touch-hyper-waypoint {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgb(94 234 212 / 32%);
+  box-shadow: 0 0 2px rgb(94 234 212 / 24%);
+  transform: translate3d(var(--tx), var(--ty), var(--tz)) translate(-50%, -50%);
+  transform-style: preserve-3d;
+}
+
+.touch-hyper-waypoint.touch-hyper-active {
+  background: var(--touch-cell-color, #5eead4);
+  box-shadow: 0 0 calc(8px * var(--touch-cell-energy, 0.5)) var(--touch-cell-color, #5eead4);
+  opacity: var(--touch-time-opacity, 1);
+}
+
+.touch-hyper-waypoint.touch-hyper-memory::after {
+  position: absolute;
+  inset: -2px;
+  border: 1px solid var(--touch-cell-color, #5eead4);
+  border-radius: 50%;
+  box-shadow: 0 0 4px var(--touch-cell-color, #5eead4);
+  content: "";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .touch-hyper-waypoint { transition: none; }
+}

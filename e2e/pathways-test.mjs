@@ -145,9 +145,11 @@ await checkAsync("endpoint drag reshapes and re-pings", async () => {
 });
 
 console.log("== Viewer + hub ==");
-await checkAsync("viewer renders pathway blips + hub shows one row", async () => {
+await checkAsync("viewer marks pathway corners in the 4D room + hub shows one row", async () => {
   T.viewer.flush();
-  assert.ok(T.viewer.element.querySelector(".touch-room-blip"));
+  for (let index = 0; index < 100 && !T.viewer.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await T.viewer.hypergrid.ready;
+  assert.ok(T.viewer.hypergrid.active.size > 0, "pathway reaches 4D corner waypoints");
   await T.hub.render();
   const row = T.hub.element.querySelector(`.touch-row[data-pathway-id="${pathwayId}"]`);
   assert.ok(row, "single hub row per pathway");

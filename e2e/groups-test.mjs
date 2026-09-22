@@ -161,18 +161,20 @@ await checkAsync("hub renders group chips with a dissolve action", async () => {
   assert.ok(memberChip, "member track chip marked as grouped");
 });
 
-await checkAsync("grouped member trails share the group hue in the room view", async () => {
+await checkAsync("grouped member trails share the group hue at memory corners", async () => {
   await T.openViewer();
   const v = T.viewer;
   v.flush();
+  for (let index = 0; index < 100 && !v.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await v.hypergrid.ready;
   const hues = new Set(
-    [...v.element.querySelectorAll(".touch-track-dot")]
-      .filter((d) => d.dataset.group)
-      .map((d) => d.style.getPropertyValue("--hue"))
+    [...v.hypergrid.active]
+      .filter((point) => point.dataset.group)
+      .map((point) => point.style.getPropertyValue("--touch-cell-color"))
   );
   assert.strictEqual(hues.size, 1, "all group members' trails share one hue");
-  const tagged = v.element.querySelector(".touch-track-dot[data-group]");
-  assert.ok(tagged?.title.includes("group"), "tooltip mentions the group");
+  const tagged = [...v.hypergrid.active].find((point) => point.dataset.group);
+  assert.ok(tagged?.title.includes(tagged.dataset.group), "tooltip identifies the group");
 });
 
 // Cleanup

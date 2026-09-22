@@ -277,10 +277,13 @@ export class Pinger {
       if (payload.settings.memoryEnabled !== false) {
         const mem = window.touch?.memory;
         if (mem) {
+          const storey = Number.isFinite(p.storey)
+            ? p.storey
+            : Math.round((p.elevation ?? 0) / Math.max(1, payload.settings.storeyHeight ?? 10));
           if (p.trace) {
-            mem.recordTrace((p.x + (p.x2 ?? p.x)) / 2, (p.y + (p.y2 ?? p.y)) / 2, p.storey ?? 0, p.name ?? null, p.trackId ?? null);
+            mem.recordTrace((p.x + (p.x2 ?? p.x)) / 2, (p.y + (p.y2 ?? p.y)) / 2, storey, p.name ?? null, p.trackId ?? null);
           } else {
-            mem.recordPing(p.x, p.y, p.storey ?? 0, p.name ?? null, p.trackId ?? null);
+            mem.recordPing(p.x, p.y, storey, p.name ?? null, p.trackId ?? null);
           }
         }
       }
@@ -290,5 +293,6 @@ export class Pinger {
       for (const frame of frames) window.touch?.viewer?.ingestFrame(frame);
     }
     window.touch?.viewer?.flush?.();
+    canvas.touchHypergrid?.refreshHypergrid?.();
   }
 }

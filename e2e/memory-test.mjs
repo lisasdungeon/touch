@@ -171,19 +171,18 @@ await checkAsync("hub memory section renders and clear works", async () => {
   assert.strictEqual(T.memoryMap().length, 0);
 });
 
-await checkAsync("viewer blips show memory heat halo and last-seen tooltip", async () => {
+await checkAsync("corner waypoints carry node-memory heat", async () => {
   T.memory.recordPing(500, 500, 0, "Hero");
   T.memory._dirty = true;
   await T.openViewer();
   T.pinger.receive({ scene: sampleScene.id, settings: { duration: 4, showRings: false, wavePhysics: false, memoryEnabled: true, storeyHeight: 10 }, pings: [
     { uid: "mv", id: "token.tok-hero", kind: "token", name: "Hero", x: 500, y: 500, elevation: 0, intensity: 70, config: {}, born: Date.now() },
   ]});
-  const room = T.viewer.element.querySelector(".touch-room-space");
-  const blip = [...room.querySelectorAll(".touch-room-blip")].find((b) => b.title.includes("Hero"));
-  assert.ok(blip, "hero blip present");
-  assert.ok(blip.title.includes("ping"), "last-seen in tooltip");
-  const heat = blip.style.getPropertyValue("--mem-heat");
-  assert.ok(Number(heat) > 0.05, `heat halo set (${heat})`);
+  for (let index = 0; index < 100 && !T.viewer.hypergrid; index++) await new Promise((resolve) => setTimeout(resolve, 10));
+  await T.viewer.hypergrid.ready;
+  const points = [...T.viewer.hypergrid.active].filter((point) => point.classList.contains("touch-hyper-memory"));
+  assert.ok(points.length > 0, "hero memory is held by a 4D corner");
+  assert.ok(points.some((point) => Number(point.style.getPropertyValue("--touch-cell-energy")) > 0.5), "warm memory raises waypoint energy");
   await T.viewer.close({ force: true });
   await T.clearMemory();
 });

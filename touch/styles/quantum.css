@@ -134,36 +134,6 @@
 }
 
 /* ==========================================
-   QUANTUM 3D ROOM — a real preserve-3d stage
-   ========================================== */
-
-/* The room gains a 3D mode: drag (or the orbit buttons) rotate the whole
-   reconstruction in space; each floor becomes a true storey plane. */
-.touch-room-space.touch-3d {
-  transform-style: preserve-3d;
-  transform: rotateX(calc(60deg * var(--tilt, 0.35)))
-             rotateY(calc(var(--yaw, 0) * 1deg));
-  transition: transform 0.15s ease-out;
-  transform-origin: 50% 50%;
-}
-
-/* Storey planes: translucent glass plates at every floor line, so stacked
-   floors read as real levels in space. */
-.touch-3d .touch-floor-line {
-  transform-style: preserve-3d;
-  transform: translateZ(calc(var(--floor-offset-num, 0) * 1px));
-  background: linear-gradient(90deg,
-    color-mix(in srgb, var(--touch-accent, #5eead4) 14%, transparent),
-    transparent 70%);
-  border-top: 1px solid color-mix(in srgb, var(--touch-accent, #5eead4) 35%, transparent);
-}
-
-/* Blips lift off their floor plane by elevation (depth parallax). */
-.touch-3d .touch-room-blip {
-  transform: translateZ(calc(var(--storey-z, 0) * 1px));
-}
-
-/* ==========================================
    QUANTUM WINDOW CHROME (glass + cyan border)
    ========================================== */
 
@@ -209,8 +179,5 @@
   .touch-quantum-glow,
   .touch-quantum-shimmer {
     animation: none;
-  }
-  .touch-room-space.touch-3d {
-    transition: none;
   }
 }

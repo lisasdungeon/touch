@@ -3,7 +3,6 @@ import { CAMERAS } from "./constants.js";
 import { levelsActive, getLevelsRange, getWallHeightRange } from "./elevation.js";
 import { flushWaves as paintWaves, flushFrames as paintFrames, syncStatus } from "./viewer-paint.js";
 
-const STOREY_SPAN = 14;
 const hexColor = (color, fallback) =>
   typeof color === "number" ? `#${color.toString(16).padStart(6, "0")}` : (color ?? fallback);
 
@@ -24,11 +23,6 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
       scan: SonarViewer.#onScan,
       calibrate: SonarViewer.#onCalibrate,
       togglePause: SonarViewer.#onTogglePause,
-      quantumCube: SonarViewer.#onQuantumCube,
-      orbitLeft: SonarViewer.#onOrbitLeft,
-      orbitRight: SonarViewer.#onOrbitRight,
-      orbitTilt: SonarViewer.#onOrbitTilt,
-      orbitReset: SonarViewer.#onOrbitReset,
     },
   };
 
@@ -37,6 +31,8 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
   frames = new Map();
   paused = false;
   floorFilter = null;
+  hypergrid = null;
+  #gridMount = 0;
 
   get title() {
     return `${game.i18n.localize("TOUCH.Viewer.Title")} — ${canvas.scene?.name ?? ""}`;
@@ -50,10 +46,8 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
       ...context,
       scene: { id: canvas.scene?.id ?? "", name: canvas.scene?.name ?? "" },
       cameras: CAMERAS.map((camera) => ({ ...camera })),
-      quantumFaces: this.#quantumFaces(),
       paused: this.paused,
       storeyHeight,
-      storeySpan: STOREY_SPAN,
       floors: this.#floorLines(),
       floorOptions: this.#floorOptions(),
       floorFilter: this.floorFilter,
@@ -75,7 +69,7 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
           : (emitter.elevation ?? 0);
       storeys.add(Math.floor(z / height));
     }
-    return [...storeys].sort((a, b) => b - a).map((storey) => ({ storey, offset: storey * STOREY_SPAN }));
+    return [...storeys].sort((a, b) => b - a).map((storey) => ({ storey }));
   }
 
   #floorOptions() {
@@ -97,7 +91,6 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
 
   #bands() {
     const unit = Math.abs(Number(game.settings.get("touch", "storeyHeight")) || 10);
-    const dimensions = canvas.dimensions;
     const bands = [];
     for (const emitter of window.touch?.emitters?.() ?? []) {
       if (emitter.kind !== "wall" && emitter.kind !== "light") continue;
@@ -118,9 +111,10 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
         key: emitter.id,
         kind: emitter.kind,
         label: `${emitter.name ?? game.i18n.localize(emitter.kind === "wall" ? "TOUCH.Viewer.BandWall" : "TOUCH.Viewer.BandLight")} — ${hasLevels ? "Levels" : "Wall Height"} ${format(rawBottom)}→${format(rawTop)}`,
-        u: ((emitter.x - dimensions.sceneX) / dimensions.sceneWidth) * 200 - 100,
-        bottom: (low / unit) * STOREY_SPAN,
-        top: ((high - low) / unit) * STOREY_SPAN,
+        x: emitter.x,
+        y: emitter.y,
+        bottomElevation: low,
+        topElevation: high,
         accent: emitter.kind === "wall" ? "#94a3b8" : hexColor(emitter.color, "#ffd88a"),
       });
     }
@@ -129,31 +123,6 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
 
   getBands() {
     return this.#bands();
-  }
-
-  reconcileBands(bands) {
-    const room = this.element?.querySelector(".touch-room-space");
-    if (!room) return;
-    const keys = new Set();
-    for (const band of bands) {
-      keys.add(band.key);
-      let element = room.querySelector(`.touch-extent-band[data-key="${band.key}"]`);
-      if (!element) {
-        element = document.createElement("div");
-        element.className = "touch-extent-band";
-        element.dataset.key = band.key;
-        room.appendChild(element);
-      }
-      element.dataset.kind = band.kind;
-      element.title = band.label;
-      element.style.setProperty("--u", band.u.toFixed(2));
-      element.style.setProperty("--b", `${band.bottom.toFixed(2)}%`);
-      element.style.setProperty("--bh", `${Math.max(4, band.top).toFixed(2)}%`);
-      element.style.color = band.accent;
-    }
-    for (const element of room.querySelectorAll(".touch-extent-band")) {
-      if (!keys.has(element.dataset.key)) element.remove();
-    }
   }
 
   _onRender(context, options) {
@@ -165,8 +134,19 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
     });
     this.#syncStatus();
     this.#startBeatTicker();
-    this.#bindOrbitDrag();
-    this.reconcileBands(this.#bands());
+    this.#mountHypergrid();
+  }
+
+  async #mountHypergrid() {
+    const host = this.element?.querySelector("[data-hypergrid]");
+    const mount = ++this.#gridMount;
+    this.hypergrid?.destroy?.();
+    this.hypergrid = null;
+    if (!host) return;
+    const { HyperGrid } = await import("./hypergrid.js");
+    if (mount !== this.#gridMount || !this.rendered || host !== this.element?.querySelector("[data-hypergrid]")) return;
+    this.hypergrid = new HyperGrid(host);
+    this.refreshHypergrid();
   }
 
   #beatTicker = null;
@@ -213,6 +193,9 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
   }
 
   async close(options) {
+    this.#gridMount++;
+    this.hypergrid?.destroy?.();
+    this.hypergrid = null;
     this.#stopBeatTicker();
     return super.close(options);
   }
@@ -223,83 +206,33 @@ export class SonarViewer extends foundry.applications.api.HandlebarsApplicationM
     this.frames.get(frame.cam).set(frame.id, frame);
   }
   flush() { paintFrames(this); }
+  refreshHypergrid() {
+    if (!this.hypergrid || !this.element) return;
+    const storeyHeight = game.settings.get("touch", "storeyHeight") ?? 10;
+    this.hypergrid.update({
+      frames: this.frames,
+      floorFilter: this.floorFilter,
+      tracks: window.touch?.trackList?.() ?? [],
+      wavefield: window.touch?.wavefield,
+      memory: window.touch?.memoryMap?.() ?? [],
+      memoryColor: window.touch?.heatColor,
+      bands: this.#bands(),
+      scene: canvas.scene,
+      storeyHeight,
+      waveSpeed: game.settings.get("touch", "waveSpeed") ?? 400,
+    });
+  }
   #syncStatus() { syncStatus(this); }
 
-  #quantumFaces() {
-    const labels = { top: "TP", bottom: "BT", left: "LT", right: "RT", front: "FR", back: "BK" };
-    return CAMERAS.map((camera) => ({ cam: camera.id, label: camera.label, face: camera.id, glyph: labels[camera.id] ?? camera.label[0] }));
-  }
-
   static #onScan() { window.touch?.pinger?.pulse({ broadcast: true }); }
-
-  static #onQuantumCube(event) {
-    const face = event.target?.closest?.("[data-face]")?.dataset.face;
-    if (face) this.#applyOrbit(face);
-  }
-
-  static #onOrbitLeft() { this.#applyOrbit(null, -30); }
-  static #onOrbitRight() { this.#applyOrbit(null, 30); }
-  static #onOrbitTilt() { this.#applyOrbit(null, 0, 0.35); }
-  static #onOrbitReset() { this.#applyOrbit("reset"); }
-
-  #applyOrbit(preset, yawDelta = 0, tiltDelta = 0) {
-    const stage = this.element?.querySelector("[data-room-space]");
-    if (!stage) return;
-    let yaw = Number(stage.style.getPropertyValue("--yaw")) || 0;
-    let tilt = Number(stage.style.getPropertyValue("--tilt")) || 0.35;
-    const presets = { top: 0, bottom: 1, left: 0.3, right: 0.3, front: 0.35, back: 0.35, reset: 0.35 };
-    if (preset === "reset") {
-      yaw = 0;
-      tilt = 0.35;
-    } else if (preset && preset in presets) {
-      tilt = presets[preset];
-      yaw = { left: -90, right: 90, front: 0, back: 180, top: 0, bottom: 0 }[preset] ?? yaw;
-    } else {
-      yaw += yawDelta;
-      tilt = Math.max(0, Math.min(1, tilt + tiltDelta));
-    }
-    stage.classList.add("touch-3d");
-    stage.style.setProperty("--yaw", String(yaw));
-    stage.style.setProperty("--tilt", String(tilt));
-  }
-
-  #bindOrbitDrag() {
-    const room = this.element?.querySelector("[data-room]");
-    const stage = this.element?.querySelector("[data-room-space]");
-    if (!room || !stage || room.dataset.orbitBound) return;
-    room.dataset.orbitBound = "true";
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
-    let startYaw = 0;
-    let startTilt = 0.35;
-    room.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
-      dragging = true;
-      startX = event.clientX;
-      startY = event.clientY;
-      startYaw = Number(stage.style.getPropertyValue("--yaw")) || 0;
-      startTilt = Number(stage.style.getPropertyValue("--tilt")) || 0.35;
-      room.setPointerCapture?.(event.pointerId);
-    });
-    room.addEventListener("pointermove", (event) => {
-      if (!dragging) return;
-      stage.classList.add("touch-3d");
-      stage.style.setProperty("--yaw", String(startYaw + (event.clientX - startX) * 0.5));
-      stage.style.setProperty("--tilt", String(Math.max(0, Math.min(1, startTilt + (event.clientY - startY) * 0.004))));
-    });
-    const stop = () => { dragging = false; };
-    room.addEventListener("pointerup", stop);
-    room.addEventListener("pointercancel", stop);
-  }
 
   static #onCalibrate() {
     this.frames.clear();
     this.floorFilter = null;
-    this.element?.querySelectorAll(".touch-blip, .touch-room-blip").forEach((element) => element.remove());
+    this.element?.querySelectorAll(".touch-blip").forEach((element) => element.remove());
     const select = this.element?.querySelector(".touch-floor-select");
     if (select) select.value = "";
-    this.render();
+    this.refreshHypergrid();
   }
 
   static #onTogglePause() {

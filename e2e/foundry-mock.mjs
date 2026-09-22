@@ -226,7 +226,7 @@ const gameRef = game;
 globalThis.canvas = {
   ready: true,
   scene: sampleScene,
-  dimensions: { sceneWidth: 2000, sceneHeight: 1500, sceneX: 0, sceneY: 0, size: 100 },
+  dimensions: { sceneWidth: 2000, sceneHeight: 1500, sceneX: 0, sceneY: 0, size: 100, distance: 5 },
   touchRings: {
     active: true,
     sprites: [],
@@ -408,7 +408,7 @@ WallHeightSim.registerHooks();
 
 /** Instantiate the Touch canvas layers the module registered (test helper). */
 globalThis.setupCanvasLayers = async () => {
-  for (const key of ["touchWaypoints", "touchPathways"]) {
+  for (const key of ["touchWaypoints", "touchPathways", "touchHypergrid"]) {
     const entry = CONFIG.Canvas.layers?.[key];
     if (entry?.layerClass && !canvas[key]) {
       canvas[key] = new entry.layerClass();
